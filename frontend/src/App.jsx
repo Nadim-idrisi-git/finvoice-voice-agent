@@ -121,7 +121,7 @@ export default function App() {
               <i className="absolute top-1 right-1 size-1.5 rounded-full bg-[#55b581]" />
             </button>
             <div className="grid size-[27px] place-items-center rounded-full bg-[#eadcc8] text-[9px] font-bold text-[#765a3a] xs:size-8 xs:text-[11px]">
-              NI
+              VG
             </div>
           </div>
         </header>

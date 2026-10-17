@@ -10,6 +10,8 @@ import { createVoiceSession } from "../services/voice.js";
 /** Text chat (OpenAI agent with rule-based fallback), voice tool execution, and voice session minting. */
 export function assistantRoutes({ store, actions, config, openai, log }) {
   const router = Router();
+  // Last OpenAI response per user, for short-term conversation memory in text chat.
+  const lastResponse = new Map();
 
   async function answerWithRules(message, ownerId) {
     const result = answerFinancialQuestion(message, await loadFinance(store, ownerId));
@@ -31,15 +33,23 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
     let source = "rules";
     if (openai.configured) {
       try {
-        reply = await runAgent({ message: value.message, ctx: { user, store, actions }, openai, model: config.OPENAI_MODEL });
+        reply = await runAgent({
+          message: value.message,
+          ctx: { user, store, actions, userMessage: value.message },
+          openai,
+          model: config.OPENAI_MODEL,
+          previousResponseId: lastResponse.get(user.id),
+        });
+        lastResponse.set(user.id, reply.responseId);
         source = "openai";
       } catch (err) {
         log.warn({ requestId: req.id, error: err instanceof Error ? err.message : "unknown" }, "Agent failed; using rules");
       }
     }
     reply ??= await answerWithRules(value.message, user.id);
+    const { responseId: _ignored, ...publicReply } = reply;
     res.json({
-      ...reply,
+      ...publicReply,
       actionProposal: reply.actionProposals[0] ?? null,
       source,
       synthetic: true,

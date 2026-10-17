@@ -26,9 +26,9 @@ export function Sidebar({ active, onSelect, hasPendingActions }) {
       </div>
       <div className={caption}>WORKSPACE</div>
       <div className="mb-[31px] hidden h-[57px] items-center gap-2.5 rounded-[9px] border border-[#edf0ed] p-2 sm:flex">
-        <div className={`${avatar} size-[33px] text-[11px]`}>NI</div>
+        <div className={`${avatar} size-[33px] text-[11px]`}>VG</div>
         <div className="flex flex-1 flex-col gap-[3px]">
-          <b className="text-[11px]">Nadim Idrisi</b>
+          <b className="text-[11px]">Vivek Gupta</b>
           <small className="text-[9px] text-[#89948e]">Personal account</small>
         </div>
         <Icon name="ChevronDown" size={15} className="text-faint" />
@@ -65,9 +65,9 @@ export function Sidebar({ active, onSelect, hasPendingActions }) {
           </div>
         </div>
         <div className="flex h-[47px] items-center justify-center gap-[9px] border-t border-[#edf0ed] px-0.5 pt-2.5 text-[#87928c] sm:justify-start">
-          <span className={`${avatar} size-[29px] text-[11px]`}>NI</span>
+          <span className={`${avatar} size-[29px] text-[11px]`}>VG</span>
           <div className="hidden flex-1 flex-col gap-[3px] sm:flex">
-            <b className="text-[11px] text-ink">Nadim Idrisi</b>
+            <b className="text-[11px] text-ink">Vivek Gupta</b>
             <small className="text-[9px] text-[#89948e]">Free plan · Demo</small>
           </div>
           <Icon name="MoreHorizontal" size={18} className="ml-auto hidden sm:block" />

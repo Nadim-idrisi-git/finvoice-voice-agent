@@ -5,7 +5,7 @@ import { LiveVoiceSession } from "../services/voice";
 const greeting = {
   id: 0,
   who: "assistant",
-  text: "Hi Nadim, I\u2019m your financial copilot. Ask me about this month\u2019s spending, subscriptions, bills, or EMIs. These demo records are synthetic.",
+  text: "Hi Vivek, I\u2019m Finvoice. I read your bank SMS and found a few things worth your attention. Tap the mic for your weekly money call, or ask me anything.",
 };
 
 /** Conversation and live-voice state. `onActionProposed(message)` fires when the assistant drafts an action. */

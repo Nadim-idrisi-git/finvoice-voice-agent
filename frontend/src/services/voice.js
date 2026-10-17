@@ -48,7 +48,11 @@ export class LiveVoiceSession {
       this.pc.addTrack(this.stream.getAudioTracks()[0], this.stream);
 
       this.channel = this.pc.createDataChannel("oai-events");
-      this.channel.onopen = () => this.transition("LISTENING");
+      this.channel.onopen = () => {
+        this.transition("LISTENING");
+        // The agent opens the call ("Sunday money call") instead of waiting for the user.
+        this.send({ type: "response.create" });
+      };
       this.channel.onmessage = (event) => void this.onEvent(JSON.parse(event.data));
       this.channel.onclose = () => !this.disposed && this.transition("DISCONNECTED");
 

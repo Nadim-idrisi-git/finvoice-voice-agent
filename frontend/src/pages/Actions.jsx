@@ -36,7 +36,7 @@ export function Actions({ actions, onConfirm, onRefresh, onCreate }) {
                 </span>
                 <div className="flex-1">
                   <b className="text-[10px]">{a.title}</b>
-                  <p className="my-[5px] text-[9px] leading-snug text-[#68756d]">{a.details}</p>
+                  <p className="my-[5px] text-[9px] leading-snug whitespace-pre-line text-[#68756d]">{a.details}</p>
                   <small className="text-[8px] text-[#939d96]">
                     {a.type.replace("_", " ")} · {new Date(a.createdAt).toLocaleString()}
                   </small>

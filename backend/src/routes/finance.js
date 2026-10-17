@@ -13,6 +13,7 @@ import {
 } from "../modules/analytics.js";
 import { HttpError } from "../http.js";
 import { loadFinance } from "../store/finance.js";
+import { briefing } from "../modules/insights.js";
 
 // Read-only, owner-scoped views over the user's financial records.
 export function financeRoutes({ store }) {
@@ -45,6 +46,7 @@ export function financeRoutes({ store }) {
       subscriptions: recurringSubscriptions(transactions),
       bills,
       emis,
+      briefing: store.profile ? briefing(store.profile) : null,
       synthetic: true,
     });
   });

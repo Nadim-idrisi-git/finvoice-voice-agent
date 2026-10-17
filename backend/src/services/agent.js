@@ -9,9 +9,14 @@ const MAX_TOOL_ROUNDS = 4;
  * the server runs them against the user's own records and feeds results back until the model answers.
  * Returns { answer, actionProposals, toolsUsed }.
  */
-export async function runAgent({ message, ctx, openai, model }) {
+export async function runAgent({ message, ctx, openai, model, previousResponseId }) {
   const base = { model, instructions: textInstructions(ctx.user), tools: toolDefinitions };
-  let response = await openai.createResponse({ ...base, input: [{ role: "user", content: message }] });
+  // Chaining on the previous response keeps the conversation's context (e.g. "yes, do it").
+  let response = await openai.createResponse({
+    ...base,
+    ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
+    input: [{ role: "user", content: message }],
+  });
   const actionProposals = [];
   const toolsUsed = [];
 
@@ -35,6 +40,7 @@ export async function runAgent({ message, ctx, openai, model }) {
   }
 
   return {
+    responseId: response.id,
     answer: outputText(response) || "I could not put together an answer. Please try rephrasing.",
     actionProposals,
     toolsUsed,

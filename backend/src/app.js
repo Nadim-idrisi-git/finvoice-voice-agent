@@ -6,11 +6,18 @@ import { securityHeaders } from "./middleware/security.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { createLogger, requestLog } from "./middleware/requestLog.js";
 import { createMemoryStore } from "./store/memory.js";
+import { createProfileStore, loadProfile } from "./store/profile.js";
 import { createActionService } from "./services/actions.js";
 import { createOpenAIClient } from "./services/openai.js";
 import { financeRoutes } from "./routes/finance.js";
 import { actionRoutes } from "./routes/actions.js";
 import { assistantRoutes } from "./routes/assistant.js";
+
+/** The parsed event dataset when present (npm run ingest), else the built-in synthetic fixture. */
+function defaultStore(config) {
+  const profile = config.NODE_ENV === "test" ? null : loadProfile();
+  return profile ? createProfileStore(profile) : createMemoryStore();
+}
 
 /**
  * Builds the Express app from explicit dependencies so tests and alternative
@@ -18,7 +25,7 @@ import { assistantRoutes } from "./routes/assistant.js";
  */
 export function createApp({
   config,
-  store = createMemoryStore(),
+  store = defaultStore(config),
   log = createLogger({ silent: config.NODE_ENV === "test" }),
   fetch = globalThis.fetch,
 }) {
@@ -50,7 +57,7 @@ export function createApp({
         error: "Production authentication is not implemented. This synthetic demo API is unavailable in production.",
       });
     }
-    res.locals.user = DEMO_USER;
+    res.locals.user = store.user ?? DEMO_USER;
     next();
   });
   app.use("/api/v1/voice/session", rateLimit({ limit: 3 }));

@@ -14,7 +14,7 @@ const prettyState = {
   DISCONNECTED: "Voice session ended",
 };
 
-const suggestions = ["How much did I spend this month?", "Compare with last month", "Find my subscriptions"];
+const suggestions = ["What should I know this week?", "Draft the IDFC reversal request", "Who keeps auto-debiting me?"];
 const squareBtn = "grid size-[30px] place-items-center rounded-[7px]";
 
 export function AssistantPanel({ assistant }) {
@@ -52,7 +52,7 @@ export function AssistantPanel({ assistant }) {
                 m.who === "assistant" ? "bg-mint text-[#438460]" : "bg-[#f0ece6] text-[#806d56]"
               }`}
             >
-              {m.who === "assistant" ? <Icon name="Sparkles" size={13} /> : "NI"}
+              {m.who === "assistant" ? <Icon name="Sparkles" size={13} /> : "VG"}
             </span>
             <div className="max-w-[84%]">
               <small className="text-[8px] font-bold text-[#7d8981]">{m.who === "assistant" ? "Finvoice" : "You"}</small>

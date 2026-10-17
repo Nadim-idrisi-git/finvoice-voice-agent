@@ -8,14 +8,14 @@ const arrowLink = "border-0 bg-transparent p-0.5 text-[9px] font-semibold text-[
 
 export function Overview({ dashboard, categories, total, change, loading, onAsk, onReminder }) {
   const graph = chartSeries(dashboard?.dailySpending ?? [], dashboard?.month ?? new Date().toISOString().slice(0, 7));
-  const unusual = dashboard?.unusual[0];
+  const findings = dashboard?.briefing?.topFindings ?? [];
   const top = categories[0];
   const changeTone = change > 0 ? "bg-[#fff1eb] text-[#b25b3d]" : change < 0 ? "bg-[#edf7f0] text-[#35835c]" : "bg-[#f0f1ee] text-[#6b7068]";
 
   return (
     <>
       <PageHeading
-        title="Good morning, Nadim"
+        title="Hi Vivek, here’s your week"
         subtitle="Here’s your money at a glance. Your demo data is synthetic."
         action={
           <button className={`${outlineBtn} p-2 sm:px-3 sm:py-[9px]`} onClick={onReminder} aria-label="Set a reminder">
@@ -124,35 +124,37 @@ export function Overview({ dashboard, categories, total, change, loading, onAsk,
         </div>
 
         <div className="grid grid-cols-1 gap-[11px] xs:grid-cols-2 xs:gap-3.5 sm:flex sm:flex-col xl:gap-[17px]">
-          {/* Insight */}
-          <div className="relative min-h-[166px] overflow-hidden rounded-[10px] border border-[#e1efe4] bg-[#e9f4eb] p-[17px] xs:min-h-[200px] sm:min-h-[202px] xl:min-h-[215px]">
+          {/* Insight: this week's findings from the data */}
+          <div className="relative overflow-hidden rounded-[10px] border border-[#e1efe4] bg-[#e9f4eb] p-[17px] xs:col-span-2 sm:col-span-1">
             <div className="flex items-center gap-1.5 text-[8px] font-bold tracking-[0.8px] text-[#548564]">
               <span className="grid size-[21px] place-items-center rounded-md bg-[#d7ebdc]">
                 <Icon name="Sparkles" size={14} />
               </span>
-              A LITTLE INSIGHT
+              THIS WEEK’S MONEY CALL
             </div>
-            <h3 className="mt-3.5 mb-[7px] max-w-[260px] font-display text-[15px] leading-[1.35] font-bold tracking-[-0.4px] xs:max-w-[220px]">
-              {unusual
-                ? "One purchase stands out in these demo records."
-                : top
-                  ? `${top.category} is your top category this month.`
-                  : "A clearer picture starts with your spending."}
-            </h3>
-            <p className="mb-[11px] max-w-[230px] text-[9px] leading-[1.55] text-[#687b6e]">
-              {unusual
-                ? `${unusual.merchant} shows ${money(unusual.amountPaise)}, well above its usual ${money(unusual.comparisonPaise)}. This is a review candidate, not a fraud finding.`
-                : top
-                  ? `You’ve spent ${money(top.amountPaise)} on ${top.category.toLowerCase()} so far. Want to compare it with last month?`
-                  : "Keep tracking your synthetic demo spending to see more insights."}
-            </p>
+            {findings.length ? (
+              <ol className="mt-3 grid gap-2.5">
+                {findings.map((f, i) => (
+                  <li key={f.title} className="flex gap-2">
+                    <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-white text-[9px] font-bold text-[#347650]">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="font-display text-[11px] leading-snug font-bold">{f.title}</p>
+                      <p className="mt-0.5 text-[9px] leading-[1.5] text-[#687b6e]">{f.whyItMatters}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-[9px] text-[#687b6e]">Load the event dataset to see this week’s findings.</p>
+            )}
             <button
-              className="relative z-[1] text-[9px] font-bold text-[#347650]"
-              onClick={() => onAsk(unusual ? "Identify unusual spending" : "Compare my expenses with last month")}
+              className="relative z-[1] mt-3 text-[9px] font-bold text-[#347650]"
+              onClick={() => onAsk("What should I know about my money this week?")}
             >
-              Explore insight <span className="pl-[5px]">→</span>
+              Ask about these <span className="pl-[5px]">→</span>
             </button>
-            <div className="absolute -right-[17px] -bottom-[37px] rotate-[-15deg] text-[95px] text-[#d8eadb]">✳</div>
           </div>
 
           {/* Coming up */}
