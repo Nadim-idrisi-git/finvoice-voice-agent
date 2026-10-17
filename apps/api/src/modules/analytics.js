@@ -1,4 +1,5 @@
-const rupees = (paise) => `\u20B9${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+import { currentMonth, formatRupees as rupees, previousMonth } from "@finance-agent/shared/format";
+
 const monthKey = (date) => date.slice(0, 7);
 function expenseTotal(rows, month) {
   return rows
@@ -11,7 +12,7 @@ function incomeTotal(rows, month) {
     .reduce((sum, t) => sum + t.amountPaise, 0);
 }
 function categoryTotals(rows, month) {
-  const sums = /* @__PURE__ */ new Map();
+  const sums = new Map();
   for (const t of rows)
     if (monthKey(t.occurredAt) === month && t.kind === "expense")
       sums.set(t.category, (sums.get(t.category) ?? 0) + t.amountPaise);
@@ -20,7 +21,7 @@ function categoryTotals(rows, month) {
     .sort((a, b) => b.amountPaise - a.amountPaise);
 }
 function merchantTotals(rows, month) {
-  const sums = /* @__PURE__ */ new Map();
+  const sums = new Map();
   for (const t of rows)
     if (monthKey(t.occurredAt) === month && t.kind === "expense")
       sums.set(t.merchant, (sums.get(t.merchant) ?? 0) + t.amountPaise);
@@ -41,10 +42,10 @@ function compareMonths(rows, current, previous) {
   };
 }
 function recurringSubscriptions(rows) {
-  const groups = /* @__PURE__ */ new Map();
+  const groups = new Map();
   for (const t of rows)
     if (t.category === "Subscriptions" && t.kind === "expense") {
-      const monthly = groups.get(t.merchant) ?? /* @__PURE__ */ new Map();
+      const monthly = groups.get(t.merchant) ?? new Map();
       monthly.set(monthKey(t.occurredAt), (monthly.get(monthKey(t.occurredAt)) ?? 0) + t.amountPaise);
       groups.set(t.merchant, monthly);
     }
@@ -63,7 +64,7 @@ function median(sorted) {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 function unusualSpending(rows) {
-  const groups = /* @__PURE__ */ new Map();
+  const groups = new Map();
   for (const t of rows)
     if (t.kind === "expense") groups.set(t.category, [...(groups.get(t.category) ?? []), t.amountPaise]);
   for (const values of groups.values()) values.sort((a, b) => a - b);
@@ -89,14 +90,6 @@ function unusualSpending(rows) {
       ];
     })
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-}
-function currentMonth(date = /* @__PURE__ */ new Date()) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-function previousMonth(month) {
-  const [y, m] = month.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 2, 1));
-  return currentMonth(date);
 }
 export {
   categoryTotals,

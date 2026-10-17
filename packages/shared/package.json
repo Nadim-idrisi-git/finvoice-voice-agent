@@ -5,10 +5,11 @@
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./format": "./src/format.js"
   },
   "scripts": {
-    "build": "node --check src/index.js",
+    "build": "node --check src/index.js && node --check src/format.js",
     "test": "vitest run"
   },
   "dependencies": {

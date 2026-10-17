@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createTransactions } from "../data/seed.js";
+import { createTransactions, syntheticBills, syntheticEmis } from "../data/seed.js";
 import { answerFinancialQuestion } from "./agent.js";
-const records = createTransactions(/* @__PURE__ */ new Date("2026-10-17T00:00:00Z"));
+const records = {
+  transactions: createTransactions(new Date("2026-10-17T00:00:00Z")),
+  bills: syntheticBills,
+  emis: syntheticEmis,
+};
 describe("grounded assistant intent routing", () => {
   it("answers English and Hinglish totals from deterministic analytics", () => {
     const expected = answerFinancialQuestion("How much did I spend this month?", records);

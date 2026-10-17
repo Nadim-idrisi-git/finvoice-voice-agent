@@ -17,7 +17,7 @@ function seededRandom(seed) {
   let n = seed;
   return () => ((n = (n * 16807) % 2147483647) - 1) / 2147483646;
 }
-function createTransactions(now = /* @__PURE__ */ new Date()) {
+function createTransactions(now = new Date()) {
   const random = seededRandom(417);
   const result = [];
   for (let monthOffset = 0; monthOffset < 7; monthOffset++) {

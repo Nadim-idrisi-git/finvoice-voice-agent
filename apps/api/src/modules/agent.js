@@ -11,7 +11,7 @@ import {
   unusualSpending,
   rupees,
 } from "./analytics.js";
-import { syntheticBills, syntheticEmis } from "../data/seed.js";
+import { monthName } from "@finance-agent/shared/format";
 const querySchema = z.object({
   category: z.string().max(60).optional(),
   month: z
@@ -35,14 +35,12 @@ const categoryMap = {
   shopping: "Shopping",
 };
 const dueDate = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
-const monthName = (month) =>
-  /* @__PURE__ */ new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-function answerFinancialQuestion(message, rows) {
+/**
+ * Deterministic, rule-based answer to a finance question.
+ * `data` is the caller's owner-scoped view: { transactions, bills, emis }.
+ */
+function answerFinancialQuestion(message, { transactions: rows, bills: allBills, emis: allEmis }) {
   const q = message.toLocaleLowerCase();
   const hindiScript = /[ऀ-ॿ]/.test(message);
   const hinglish = /\b(mera|mere|meri|kitne|kitna|kharch|kharcha|batao|dikhao|khaane|kamai)\b/i.test(message);
@@ -167,7 +165,7 @@ function answerFinancialQuestion(message, rows) {
   }
   if (/bill|due|payment|emi|installment|किस्त|बिल/.test(q)) {
     if (/emi|installment|किस्त/.test(q)) {
-      const emis = [...syntheticEmis].sort((a, b) => a.nextDueAt.localeCompare(b.nextDueAt));
+      const emis = [...allEmis].sort((a, b) => a.nextDueAt.localeCompare(b.nextDueAt));
       const [next, ...rest] = emis;
       const later = rest.length
         ? `, then ${rest.map((e) => `${e.name} (${rupees(e.installmentPaise)}, ${dueDate(e.nextDueAt)})`).join(", ")}`
@@ -180,7 +178,7 @@ function answerFinancialQuestion(message, rows) {
         intent: "emis",
       };
     }
-    const bills = [...syntheticBills].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    const bills = [...allBills].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
     const [next, ...rest] = bills;
     const later = rest.length
       ? `, followed by ${rest.map((b) => `${b.name} (${rupees(b.amountPaise)}, ${dueDate(b.dueAt)})`).join(" and ")}`
@@ -210,4 +208,16 @@ function answerFinancialQuestion(message, rows) {
     intent: "help",
   };
 }
-export { answerFinancialQuestion };
+
+/** Returns the in-app action a message asks for (reminder or spending alert), or null. */
+function detectActionRequest(message) {
+  if (!/remind|reminder|yaad dila|याद दिला|spending alert|configure an alert/i.test(message)) return null;
+  const alert = /alert/i.test(message);
+  return {
+    type: alert ? "spending_alert" : "reminder",
+    title: alert ? "Spending alert proposal" : "Reminder proposal",
+    details: message.slice(0, 500),
+  };
+}
+
+export { answerFinancialQuestion, detectActionRequest };
