@@ -32,6 +32,8 @@ export function createOpenAIClient({ apiKey, fetch, log }) {
     configured: Boolean(apiKey),
     /** Responses API: https://developers.openai.com/api/docs/guides/function-calling */
     createResponse: (body) => post("/responses", body),
+    /** Ephemeral key for a browser Realtime session. */
+    createRealtimeClientSecret: (body) => post("/realtime/client_secrets", body),
   };
 }
 

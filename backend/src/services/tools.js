@@ -227,7 +227,7 @@ const tools = [
 ];
 const byName = new Map(tools.map((tool) => [tool.name, tool]));
 
-/** OpenAI function tools for the Responses API (used by both text and voice turns). */
+/** OpenAI function tools (same shape for the Responses API and Realtime sessions). */
 export const toolDefinitions = tools.map(({ name, description, parameters }) => ({
   type: "function",
   name,
