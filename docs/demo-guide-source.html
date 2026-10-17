@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Finvoice Demo Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink:#17221f; --muted:#5f6f66; --brand:#24744c; --mint:#eaf5ee; --line:#dfe8e2; --warn:#9a463a; --amber:#fff4e4; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, "Kohinoor Devanagari", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4pt; letter-spacing: -0.5pt; }
+  h2 { font-size: 15pt; margin: 0 0 8pt; color: var(--brand); letter-spacing: -0.2pt; }
+  h3 { font-size: 11.5pt; margin: 12pt 0 4pt; }
+  p { margin: 0 0 6pt; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .kicker { font-size: 8pt; font-weight: 700; letter-spacing: 1.2pt; color: #3f8a62; text-transform: uppercase; margin-bottom: 6pt; }
+  .lead { font-size: 12.5pt; color: var(--muted); }
+  .box { border: 1px solid var(--line); border-radius: 8pt; padding: 9pt 11pt; margin: 8pt 0; }
+  .mint { background: var(--mint); border-color: #cfe6d7; }
+  .amber { background: var(--amber); border-color: #f0dfc0; }
+  .say { font-size: 11pt; font-weight: 600; }
+  .hi { font-style: italic; color: #2f5a43; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0; font-size: 9.6pt; }
+  th, td { text-align: left; vertical-align: top; padding: 5pt 6pt; border-bottom: 1px solid var(--line); }
+  th { font-size: 8pt; text-transform: uppercase; letter-spacing: .8pt; color: var(--muted); }
+  .t { white-space: nowrap; font-weight: 700; color: var(--brand); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; }
+  .stat { border: 1px solid var(--line); border-radius: 8pt; padding: 8pt 10pt; }
+  .stat b { display: block; font-size: 17pt; color: var(--brand); }
+  .stat span { font-size: 8.5pt; color: var(--muted); }
+  ul { margin: 2pt 0 6pt 16pt; padding: 0; }
+  li { margin: 2pt 0; }
+  .qa { border-bottom: 1px solid var(--line); padding: 6pt 0; break-inside: avoid; }
+  .qa .q { font-weight: 700; }
+  .qa .a { color: #24332b; margin-top: 2pt; }
+  .flow { display: flex; align-items: stretch; gap: 5pt; margin: 8pt 0; }
+  .flow div { flex: 1; border: 1px solid #cfe6d7; background: var(--mint); border-radius: 7pt; padding: 6pt; font-size: 8.8pt; text-align: center; }
+  .flow .arrow { flex: 0 0 auto; background: none; border: 0; padding: 6pt 0; color: var(--brand); font-weight: 700; }
+  .small { font-size: 8.5pt; color: var(--muted); }
+  .cover { display: flex; flex-direction: column; justify-content: center; min-height: 250mm; }
+  .tag { display: inline-block; border: 1px solid #cfe6d7; background: var(--mint); color: #2f6b4c; border-radius: 20pt; padding: 2pt 8pt; font-size: 8.5pt; font-weight: 600; margin: 0 4pt 4pt 0; }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover + pitch -->
+<section class="page cover">
+  <div class="kicker">Voice AI Fintech Buildathon · Bachatt × Digia · 17 Oct 2026</div>
+  <h1>Finvoice</h1>
+  <p class="lead">A voice agent that calls you once a week, reads your bank SMS, emails and policies, tells you what you didn't know, and gets one thing done before the call ends, in Hinglish.</p>
+  <div style="margin:10pt 0 18pt">
+    <span class="tag">Hinglish · Hindi · English</span><span class="tag">Live voice, interruptible</span><span class="tag">Every number grounded in your records</span><span class="tag">Acts only after "haan"</span>
+  </div>
+
+  <h2>The 20-second opening (memorise this)</h2>
+  <div class="box mint">
+    <p class="say">"Your phone already knows everything about your money: UPI alerts, EMIs, insurance emails. Nobody reads them, so a double charge or a lapsed policy goes unnoticed. Finvoice is a voice agent that calls you every Sunday, reads all of it, tells you the three things that matter, and fixes one on the call. Let me show you."</p>
+  </div>
+
+  <h2>Who it's for</h2>
+  <p>Busy salaried Indians with multiple bank accounts, autopays and a policy or two: people who never open a finance dashboard but always pick up a call.</p>
+
+  <h2>The loop (from the handbook) and how we do it</h2>
+  <div class="flow">
+    <div><b>Raw data</b><br/>2,592 SMS, 2,154 emails, insurance, investment and loan records</div><div class="arrow">→</div>
+    <div><b>Financial picture</b><br/>904 evidence-tagged facts; debits linked to mandates and accounts</div><div class="arrow">→</div>
+    <div><b>Understanding</b><br/>Duplicate charges, bounced autopays, lapsed cover</div><div class="arrow">→</div>
+    <div><b>Recommendation</b><br/>"Reverse the duplicates", "your cover is off"</div><div class="arrow">→</div>
+    <div><b>Action</b><br/>Drafts reversal letter / claim, confirmed by voice</div>
+  </div>
+</section>
+
+<!-- 2. Demo script -->
+<section class="page">
+  <div class="kicker">Final five: 3 minutes, live, no slides, a judge plays the user</div>
+  <h2>The 3-minute live demo script</h2>
+  <table>
+    <tr><th style="width:12%">Time</th><th style="width:44%">You / the judge say</th><th>What happens / what to point at</th></tr>
+    <tr><td class="t">0:00–0:20</td><td>Your 20-second opening (page 1).</td><td>Overview page open, voice hero visible, findings on the right.</td></tr>
+    <tr><td class="t">0:20–0:45</td><td>Click <b>Start money call</b>. Hand the mic/laptop to the judge.</td><td>Finvoice greets in Hinglish and names three findings: <b>IDFC charged ₹590 five times on 8 Oct (₹2,360 duplicate)</b>, <b>₹5 lakh Care Health cover off since 5 June</b>, <b>2 autopays bounced on PNB</b>. Point at the orb and captions.</td></tr>
+    <tr><td class="t">0:45–1:05</td><td>Judge interrupts mid-sentence: <span class="hi">"IDFC wala detail mein batao."</span></td><td>She stops instantly and explains. Say: <b>"It handles interruptions."</b></td></tr>
+    <tr><td class="t">1:05–1:35</td><td><span class="hi">"Reversal draft kar do."</span> → she reads back ₹2,360 → <span class="hi">"Haan, confirm karo."</span></td><td>Draft created, confirmed only after the explicit "haan". Say: <b>"Nothing happens without a clear yes, enforced on the server, not just the prompt."</b></td></tr>
+    <tr><td class="t">1:35–2:20</td><td><span class="hi">"Papa hospital mein admit hain, claim chalega?"</span> → <span class="hi">"Unka naam Dinesh Kumar Gupta, Apollo Kolkata, chest pain. Draft bana do."</span> → <span class="hi">"Haan."</span></td><td>Calm first line, then the honest result: <b>cover was not active on that date (cancelled 5 June, mandate cancelled)</b>. Claim intimation draft is still prepared. Say: <b>"It tells the truth even when the truth is bad news."</b></td></tr>
+    <tr><td class="t">2:20–2:45</td><td>Click <b>Actions</b>.</td><td>Show both drafts: the IDFC reversal letter (₹2,360, account 2145, balance trail) and the Care Health claim intimation.</td></tr>
+    <tr><td class="t">2:45–3:00</td><td><b>Close:</b> "Every number you heard came from his SMS and records, checked by code before it's spoken. It found ₹2,360 he was owed and a health cover he didn't know he'd lost, and did something about both."</td><td>Stop. Smile. Wait for questions.</td></tr>
+  </table>
+
+  <h3>If the judge goes off-script</h3>
+  <ul>
+    <li>Any balance question: she answers with the "as of" date (IDFC ₹3,994.90, PNB 9380 ₹5,564.36, HDFC 7350 ₹14,261.39).</li>
+    <li>Something not in the data (CIBIL score, loan rate, room-rent limit): she says she can't verify it. <b>That's a feature: say "it refuses to guess."</b></li>
+    <li>"Send money" or "cancel my subscription": she declines; no money movement by design.</li>
+    <li>Pure English or pure Hindi: she mirrors the language.</li>
+  </ul>
+
+  <h3>If it breaks, say what should have happened and move on (handbook rule)</h3>
+  <div class="box amber">
+    <ul style="margin-left:14pt">
+      <li><b>Mic/voice fails:</b> use the text box "Prefer typing?" (same agent, same checked numbers). Type: <i>What should I know this week?</i></li>
+      <li><b>She's slow to answer:</b> "She's pulling his records; every number is checked first."</li>
+      <li><b>Error banner:</b> refresh once; voice reconnects with a fresh session.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3. Checklist + proof -->
+<section class="page">
+  <h2>10 minutes before you present</h2>
+  <ul>
+    <li>Backend and frontend running (<code>npm run dev</code>); open <b>http://localhost:5173</b> and <b>refresh</b>.</li>
+    <li><b>Headphones</b> on the laptop if possible (clean interruptions, no echo). If the judge speaks, use the laptop mic and keep volume moderate.</li>
+    <li>Pick the voice that sounded best in your test (Marin female or Ash/Cedar male); it's remembered.</li>
+    <li>Allow the microphone once in Chrome before going on stage.</li>
+    <li>Clear old drafts? Restarting the backend clears Actions (in-memory), which gives a clean demo.</li>
+    <li>Close other tabs; turn off notifications; charge the laptop.</li>
+    <li>Have the text fallback visible (scroll position) in case voice fails.</li>
+  </ul>
+
+  <h2>Proof points to quote</h2>
+  <div class="grid2">
+    <div class="stat"><b>35/35</b><span>evaluation cases passed against the real model, 19/19 critical (English 23/23, Hinglish 10/10, Hindi 2/2)</span></div>
+    <div class="stat"><b>904</b><span>facts parsed from 2,592 SMS, each tied to its sms_id; 0 rejected, only 4 money SMS unparsed</span></div>
+    <div class="stat"><b>0</b><span>unauthorised confirmations in testing: confirm needs an explicit yes, checked on the server</span></div>
+    <div class="stat"><b>100%</b><span>correct tool selection; "can't verify" on every missing-data question (credit score, room rent, loan rate)</span></div>
+  </div>
+
+  <h2>How it works (one breath)</h2>
+  <div class="flow">
+    <div><b>Event dataset</b><br/>SMS, email, insurance, investment, loan CSVs</div><div class="arrow">→</div>
+    <div><b>Ingest</b><br/>Deterministic parsing → evidence-backed facts</div><div class="arrow">→</div>
+    <div><b>Tools</b><br/>Charges, balances, mandates, insurance, claims, email search</div><div class="arrow">→</div>
+    <div><b>OpenAI Realtime voice</b><br/>Hinglish, interruptible, calls tools</div><div class="arrow">→</div>
+    <div><b>Validator</b><br/>Every ₹ must match a tool result</div>
+  </div>
+  <p class="small">Stack: React + Tailwind, Node + Express, OpenAI Realtime (gpt-realtime-2.1) for voice and the Responses API with tool calling for text. Tool-based retrieval rather than vector RAG: money questions need exact numbers, not "similar text".</p>
+
+  <h2>Key numbers cheat sheet</h2>
+  <table>
+    <tr><th>Fact</th><th>Value (from the records)</th></tr>
+    <tr><td>Duplicate IDFC fee</td><td>₹590 × 5 on 8 Oct → 4 duplicates = ₹2,360 (account 2145; balance ₹27,410 → ₹25,050)</td></tr>
+    <tr><td>Bounced autopays</td><td>2 on PNB account 9380 since 7 Oct; ₹119.67 NACH return charge; Trusave Fintech debits ~12×/week</td></tr>
+    <tr><td>IDFC minimum balance</td><td>₹25,000 required; 6 warnings; ₹2,950 fees paid</td></tr>
+    <tr><td>Health cover</td><td>Care Health base cover, ₹5,00,000, 1 adult; cancelled 5 June (UPI mandate cancelled); eligibility block on new cover</td></tr>
+    <tr><td>Life cover</td><td>Two LIC policies (…9324 ₹2,596; …3050 ₹4,677), last paid 21 Sept</td></tr>
+    <tr><td>Investments</td><td>Arunodaya Large Cap: ₹5,134 invested, ₹5,103.89 now (−₹30.11); ₹151 daily SIP active</td></tr>
+    <tr><td>Loans</td><td>Arthiva Capital and Tejora Finance applications both rejected (not eligible)</td></tr>
+  </table>
+</section>
+
+<!-- 4. Q&A -->
+<section class="page">
+  <h2>Questions judges are likely to ask, with answers</h2>
+  <p class="small">The handbook says judges score <b>Understands · Recommends · Acts · Voice</b>. Answers are short on purpose: say the first sentence, add the second only if asked.</p>
+
+  <div class="qa"><div class="q">1. How do you know it isn't hallucinating numbers?</div><div class="a">Every number comes from a tool over his parsed records, each fact tied to an SMS or email ID. Before an answer is shown, code checks every rupee amount against the tool results; if one doesn't match, it retries once and otherwise says it can't verify. We test this with 35 cases against the real model.</div></div>
+  <div class="qa"><div class="q">2. What did it tell the user that he didn't know?</div><div class="a">That IDFC charged the same ₹590 fee five times on one day (₹2,360 of duplicates), and that his ₹5 lakh health cover has been off since June because his autopay mandate was cancelled.</div></div>
+  <div class="qa"><div class="q">3. What actually got done?</div><div class="a">A reversal request letter to IDFC with the exact amounts and balance trail, and a claim intimation draft for Care Health. Both are saved in Actions after a spoken yes. We don't send anything to a bank: no real integrations, by the rules.</div></div>
+  <div class="qa"><div class="q">4. What if someone says "yes" by accident, or the model decides to confirm on its own?</div><div class="a">Confirmation is enforced on the server: the action only executes if the user's latest words contain an explicit yes. A draft request is never treated as a yes. Voice tool calls are also deduplicated, so a retry can't run an action twice.</div></div>
+  <div class="qa"><div class="q">5. How does it handle interruptions?</div><div class="a">OpenAI Realtime over WebRTC with semantic voice-activity detection: when you speak, playback is cut and the server truncates unplayed audio. The UI shows "Interrupted · listening".</div></div>
+  <div class="qa"><div class="q">6. Why Hinglish, and how good is it?</div><div class="a">That's how most Indians actually talk about money. She mirrors the user's language, uses Indian number words (lakh, "do hazaar teen sau saath"), and gendered Hindi grammar that matches the voice. Text evaluation: Hinglish 10/10, Hindi 2/2.</div></div>
+  <div class="qa"><div class="q">7. Is this RAG?</div><div class="a">Tool-based retrieval: the model fetches exact facts through tools at question time, plus keyword search over emails. We avoided vector RAG for money because similarity search can return the wrong chunk; deterministic tools give the same number every time.</div></div>
+  <div class="qa"><div class="q">8. What happens when the data doesn't have the answer?</div><div class="a">It says so. Credit score, loan interest rate, room-rent limits aren't in the records, so it says it can't verify them and offers what it can check. Unknown is never treated as zero.</div></div>
+  <div class="qa"><div class="q">9. How did you connect the data, not just read it?</div><div class="a">Debits are linked to mandates and accounts: the bounced NACH on PNB 9380 is linked to the Trusave Fintech autopays pulling from the same account; the lapsed policy is linked to its cancelled UPI mandate and the eligibility block.</div></div>
+  <div class="qa"><div class="q">10. Why would the insurance claim be useful if the policy was cancelled?</div><div class="a">That's exactly the point: in a hospital moment the worst thing is false hope. It says calmly that records show no active cover on that date, the insurer decides, and still prepares the intimation so nothing is missed.</div></div>
+  <div class="qa"><div class="q">11. Isn't the ₹135 premium vs ₹37 rate card an overcharge?</div><div class="a">Maybe, but the data doesn't say whether ₹135 is per day or per cycle, so the agent reports both values and doesn't call it an overcharge. We don't claim what the data doesn't back.</div></div>
+  <div class="qa"><div class="q">12. How fast is it?</div><div class="a">Voice streams in real time; she says a short hello before fetching data so there's no dead air. Tool lookups are in-memory. Text answers take about 4–6 seconds including validation.</div></div>
+  <div class="qa"><div class="q">13. Security and privacy?</div><div class="a">The OpenAI key never reaches the browser (short-lived session keys), data is scoped to the user on the server, the model never chooses user IDs, SMS text is treated as data, not instructions, and prompt-injection and cross-user requests are in our test suite.</div></div>
+  <div class="qa"><div class="q">14. Could this scale to millions of users?</div><div class="a">The architecture can, but we haven't load-tested it and don't claim it. Next steps: real login, per-user facts in MongoDB, shared rate limits; our capacity notes estimate ~500 concurrent calls for 5M registered users.</div></div>
+  <div class="qa"><div class="q">15. What's the business model?</div><div class="a">B2C: free weekly call, paid tier for actions (disputes filed, claims tracked, autopay clean-up), plus partner revenue for fixing problems it finds (e.g. switching to a zero-balance account) with clear disclosure.</div></div>
+  <div class="qa"><div class="q">16. What would you build next?</div><div class="a">Read PDF attachments (credit report, loan agreements, policy wording) so it can explain coverage clauses; send the drafts via email with consent; schedule the actual weekly outbound call.</div></div>
+  <div class="qa"><div class="q">17. Did you build this today?</div><div class="a"><b>Answer honestly.</b> Say which parts existed before 11 AM (the app scaffold / template) and what you built on-site today: dataset ingestion and findings, the insurance companion, Hinglish voice tuning, the validator and evaluation, and the voice-first UI. Templates are allowed; being upfront protects you.</div></div>
+  <div class="qa"><div class="q">18. Which voice stack and why not Sarvam or ElevenLabs?</div><div class="a">OpenAI Realtime gives true speech-to-speech streaming with interruption and tool calling in one session, which made a live, interruptible Hinglish call possible in a day. Any stack was allowed.</div></div>
+</section>
+
+</body>
+</html>
