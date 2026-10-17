@@ -13,7 +13,6 @@ const TRANSCRIPTION_HINT =
  */
 // Voices the user may pick in the UI (OpenAI Realtime built-in voices).
 export const VOICES = ["marin", "cedar", "coral", "sage", "shimmer", "ash", "verse", "ballad", "alloy", "echo"];
-const SPEECH_SPEED = 0.95; // slightly slower for clearer Hindi on phone speakers
 
 export async function createVoiceSession({ config, user, openai, voice: requested }) {
   const voice = VOICES.includes(requested) ? requested : config.OPENAI_VOICE;
@@ -34,7 +33,8 @@ export async function createVoiceSession({ config, user, openai, voice: requeste
           transcription: { model: config.OPENAI_TRANSCRIBE_MODEL, prompt: TRANSCRIPTION_HINT },
           turn_detection: { type: "semantic_vad" },
         },
-        output: { voice, speed: SPEECH_SPEED },
+        // Natural speed (1.0): slowing playback time-stretches the audio and makes it crackle.
+        output: { voice },
       },
     },
   });
