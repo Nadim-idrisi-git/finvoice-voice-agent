@@ -1,0 +1,5 @@
+# Security and privacy
+
+All records are synthetic. Demo identity is not production authentication; disable demo auth on any public deployment. The backend derives owner identity from its session middleware, never model arguments. Tool schemas restrict inputs and tool names. Consequential workflow actions require action-specific server-side confirmation; external cancellation and money transfer are not implemented. Provider credentials stay in backend environment variables. Logs should not include transcripts, audio, API keys, or financial details.
+
+Before real users: implement a reviewed identity provider, CSRF/session protections, durable per-user storage and deletion, retention controls, production CORS, rate limits backed by shared storage, dependency scanning, abuse monitoring, security review, and provider privacy review. Do not upload real bank documents in this MVP. The current dependency audit is clean, but this does not replace application security review.

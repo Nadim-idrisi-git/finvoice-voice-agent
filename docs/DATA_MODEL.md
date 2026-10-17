@@ -1,0 +1,3 @@
+# Data model
+
+The local synthetic domain includes user, transaction, merchant/category, subscription candidate, bill, EMI schedule, reminder, spending alert, agent action, and audit event. Each record is scoped by `ownerId`. Amounts are integer paise, dates ISO timestamps, currency INR, and seeded transaction generation is deterministic for a supplied date. The canonical local fixture is in `apps/api/src/data/seed.js`; `npm run seed` writes synthetic transactions to MongoDB. The current API reads from its in-memory fixture and keeps action state in process memory; Mongo-backed runtime repositories and durable action history remain future work. No real financial record is required or accepted by the demo.

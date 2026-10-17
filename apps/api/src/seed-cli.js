@@ -1,0 +1,11 @@
+import "dotenv/config";
+import mongoose from "mongoose";
+import { createTransactions } from "./data/seed.js";
+import { TransactionModel } from "./data/models.js";
+if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required for the seed command.");
+await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8e3 });
+const records = createTransactions();
+const ops = records.map((row) => ({ updateOne: { filter: { id: row.id, ownerId: row.ownerId }, update: { $set: { ...row, occurredAt: new Date(row.occurredAt) } }, upsert: true } }));
+if (ops.length) await TransactionModel.bulkWrite(ops);
+console.log(`Seeded ${records.length} synthetic INR transactions deterministically.`);
+await mongoose.disconnect();

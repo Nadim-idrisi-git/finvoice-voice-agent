@@ -1,0 +1,11 @@
+# Voice architecture
+
+Primary candidate: Gemini Live native audio over its supported real-time bidirectional session. The current official Live API docs describe audio in/out, multilingual conversation, tool calls, and VAD interruption; when interruption is reported, client audio buffers must be cleared. We use a server-side credential boundary and a provider adapter. The web app does not bundle a long-lived API key.
+
+The UI models `IDLE`, `CONNECTING`, `LISTENING`, `USER_SPEAKING`, `PROCESSING`, `ASSISTANT_SPEAKING`, `INTERRUPTED`, `RECONNECTING`, `ERROR`, and `DISCONNECTED`, with an explicit transition table. Teardown closes the provider session and stops microphone tracks. Generation IDs prevent late events from updating a newer turn; queued PCM audio plays serially and is cleared on provider interruption. Text remains available in every state.
+
+Gemini's Live SDK/API shape and eligible model names can change. The configured model is environment-driven; verify current availability before deployment. After connection loss, the user can restart voice and receive a fresh short-lived token; automatic session resumption is not implemented. The browser client integration remains gated on a key and must be exercised end-to-end with the provider. The voice interface must not imply a successful live connection when unconfigured.
+
+The provider exposes prebuilt voice selection through `speechConfig`; the MVP selects the API-server setting `GEMINI_VOICE` (default `Kore`). No speaking-rate control is exposed in the Live API configuration used here. The configured voice and naturalness for Hindi/Hinglish remain unevaluated until an audio session can be tested.
+
+Provider references (official): [Live API capabilities](https://ai.google.dev/gemini-api/docs/live-api/capabilities), [ephemeral tokens](https://ai.google.dev/gemini-api/docs/live-api/ephemeral-tokens), [Live API tools](https://ai.google.dev/gemini-api/docs/live-api/tools), [Live API getting started](https://ai.google.dev/gemini-api/docs/live-api/get-started-sdk), [Live API best practices](https://ai.google.dev/gemini-api/docs/live-api/best-practices).
