@@ -43,13 +43,17 @@ export default function App() {
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
     setError("");
+    // Free hosting sleeps when idle; the first request can take up to a minute while it wakes.
+    const slow = setTimeout(() => setNotice("Waking up the server… the first load can take up to a minute on free hosting."), 4000);
     try {
       const [data, pending] = await Promise.all([api.dashboard(), api.actions()]);
       setDashboard(data);
       setActions(pending);
+      setNotice((n) => (n.startsWith("Waking up") ? "" : n));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not connect to the financial data service.");
     } finally {
+      clearTimeout(slow);
       setLoading(false);
     }
   }

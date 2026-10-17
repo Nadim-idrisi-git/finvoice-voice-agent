@@ -35,14 +35,22 @@ export function createApp({
   app.locals.databaseStatus = "synthetic-fixture";
 
   app.disable("x-powered-by");
+  // Behind a hosting proxy (Render), use the client IP from X-Forwarded-For so rate limits are per visitor.
+  if (config.NODE_ENV === "production") app.set("trust proxy", 1);
   app.use(securityHeaders);
   // Production allows only WEB_ORIGIN. In development any localhost port is allowed,
   // because Vite moves to the next free port when 5173 is taken.
   const localhost = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+  const allowed = (config.WEB_ORIGINS ?? [config.WEB_ORIGIN]).map(
+    (o) => new RegExp(`^${o.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[a-z0-9-]*")}$`, "i"),
+  );
   app.use(
     cors({
       origin: (origin, done) =>
-        done(null, !origin || origin === config.WEB_ORIGIN || (config.NODE_ENV !== "production" && localhost.test(origin))),
+        done(
+          null,
+          !origin || allowed.some((re) => re.test(origin)) || (config.NODE_ENV !== "production" && localhost.test(origin)),
+        ),
       methods: ["GET", "POST"],
     }),
   );
@@ -61,7 +69,7 @@ export function createApp({
 
   // Demo identity. Fail closed in production until real authentication exists.
   app.use("/api/v1", (_req, res, next) => {
-    if (config.NODE_ENV === "production") {
+    if (config.NODE_ENV === "production" && !config.DEMO_MODE) {
       return res.status(503).json({
         error: "Production authentication is not implemented. This synthetic demo API is unavailable in production.",
       });

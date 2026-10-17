@@ -1,7 +1,9 @@
+# Render Blueprint: New → Blueprint → select this repo. Secrets marked sync: false are entered in the dashboard.
 services:
   - type: web
     name: finvoice-backend
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm ci
     startCommand: npm start
@@ -9,8 +11,14 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Serve the synthetic demo API in production (no real users or bank data).
+      - key: DEMO_MODE
+        value: "true"
+      # Allowed frontend origins; the wildcard covers the Vercel production and preview URLs.
       - key: WEB_ORIGIN
-        sync: false
+        value: https://finvoice*.vercel.app
       - key: MONGODB_URI
         sync: false
       - key: OPENAI_API_KEY

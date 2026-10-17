@@ -154,3 +154,18 @@ describe("voice confirmation guard", () => {
     assert.equal(accepted.body.result.status, "SUCCEEDED");
   });
 });
+
+describe("production settings", () => {
+  it("serves the demo API in production only with DEMO_MODE, and allows wildcard Vercel origins", async () => {
+    const api = await startApp({ NODE_ENV: "production", DEMO_MODE: "true", WEB_ORIGIN: "https://finvoice*.vercel.app" });
+    try {
+      const ok = await fetch(api.base + "/api/v1/dashboard", { headers: { Origin: "https://finvoice-abc123.vercel.app" } });
+      const bad = await fetch(api.base + "/api/v1/dashboard", { headers: { Origin: "https://evil.example.com" } });
+      assert.equal(ok.status, 200);
+      assert.equal(ok.headers.get("access-control-allow-origin"), "https://finvoice-abc123.vercel.app");
+      assert.equal(bad.headers.get("access-control-allow-origin"), null);
+    } finally {
+      await api.close();
+    }
+  });
+});

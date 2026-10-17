@@ -167,6 +167,19 @@ function validateFact(f) {
   return null;
 }
 
+/**
+ * Masks personal identifiers before anything is written to profile.json (which is committed and served):
+ * PAN numbers, email addresses, phone numbers (incl. phone-based UPI handles), and long account/reference
+ * numbers (last 4 digits kept, which is how banks show them anyway).
+ */
+export function redact(value) {
+  return String(value ?? "")
+    .replace(/[A-Z]{5}\d{4}[A-Z]/g, "[PAN]") // also when glued to other codes (e.g. a PAN inside a longer trading code)
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[email]")
+    .replace(/(?:\+91[\s-]?|\b0)?\b[6-9]\d{9}\b/g, "[phone]")
+    .replace(/\b\d{9,}\b/g, (digits) => `XXXX${digits.slice(-4)}`);
+}
+
 const nextDay = (at) => new Date(new Date(`${at.slice(0, 10)}T00:00:00Z`).getTime() + 864e5).toISOString().slice(0, 10);
 const bankName = (code) =>
   ({ HDFCBK: "HDFC Bank", HDFCBN: "HDFC Bank", PNBSMS: "Punjab National Bank", IDFCFB: "IDFC FIRST Bank" })[code] ?? code;
@@ -247,7 +260,7 @@ async function readRecords() {
     if (seen.has(key) || /^Delivery Status Notification/i.test(subject)) return; // forwarded copies and bounces
     seen.add(key);
     const snippet = r.body.replace(/https?:\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 300);
-    emails.push({ emailId: `email-${emails.length + 1}`, date, subject: subject.slice(0, 140), snippet });
+    emails.push({ emailId: `email-${emails.length + 1}`, date, subject: redact(subject.slice(0, 140)), snippet: redact(snippet) });
   });
 
   // Life insurance premiums from payment emails (e.g. LIC "Payment For 25XXX9324 ₹2596 ... Debited from Bank Account : XXXXXX2750").
@@ -345,6 +358,10 @@ async function main() {
     if (!/-(S|T)$/.test(r.sender) || /otp|one time password|verification code/i.test(r.body_text)) return;
     quality.transactional++;
     const fact = parse(r);
+    if (fact) {
+      fact.text = redact(fact.text);
+      fact.counterparty = redact(fact.counterparty);
+    }
     const problem = fact && validateFact(fact);
     if (problem) quality.rejected.push({ smsId: r.sms_id, problem });
     else if (fact) facts.push(fact);

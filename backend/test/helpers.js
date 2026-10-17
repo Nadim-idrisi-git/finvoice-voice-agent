@@ -9,6 +9,7 @@ export async function startApp(env = {}, deps = {}) {
   await once(server, "listening");
   const base = `http://127.0.0.1:${server.address().port}`;
   return {
+    base,
     async request(path, { method = "GET", body } = {}) {
       const response = await fetch(base + path, {
         method: body === undefined ? method : "POST",

@@ -24,7 +24,7 @@ function category(f) {
   return "Payments";
 }
 
-export function createProfileStore(profile) {
+export function createProfileStore(profile, { collections } = {}) {
   const user = { id: profile.user.id, name: titleCase(profile.user.name), currency: "INR" };
   const ownerId = user.id;
   const transactions = profile.facts
@@ -73,15 +73,15 @@ export function createProfileStore(profile) {
     };
   };
   return {
-    kind: "event-dataset",
+    kind: collections ? "event-dataset+mongodb" : "event-dataset",
     user,
     profile,
     transactions: owned(transactions),
     bills: owned(bills),
     emis: owned(emis),
-    actions: collection(),
-    reminders: collection(),
-    alerts: collection(),
-    audit: collection(),
+    actions: collections?.actions ?? collection(),
+    reminders: collections?.reminders ?? collection(),
+    alerts: collections?.alerts ?? collection(),
+    audit: collections?.audit ?? collection(),
   };
 }

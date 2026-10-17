@@ -23,17 +23,26 @@ export function loadConfig(env = process.env) {
   const PORT = Number(text(env, "PORT", "4100"));
   if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) fail("PORT", "expected an integer from 1 to 65535");
 
+  // One or more allowed browser origins, comma-separated; "*" may stand for a subdomain part
+  // (e.g. https://finvoice*.vercel.app covers Vercel production and preview URLs).
   const WEB_ORIGIN = text(env, "WEB_ORIGIN", "http://localhost:5173");
-  try {
-    new URL(WEB_ORIGIN);
-  } catch {
-    fail("WEB_ORIGIN", "expected a URL");
+  const WEB_ORIGINS = WEB_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  for (const origin of WEB_ORIGINS) {
+    try {
+      new URL(origin.replace(/\*/g, "x"));
+    } catch {
+      fail("WEB_ORIGIN", `expected URLs, got "${origin}"`);
+    }
   }
+  const DEMO_MODE = ["1", "true", "yes"].includes(String(text(env, "DEMO_MODE", "false")).toLowerCase());
 
   return {
     NODE_ENV,
     PORT,
     WEB_ORIGIN,
+    WEB_ORIGINS,
+    // Opt-in: serve the synthetic demo API in production (no real users or bank data).
+    DEMO_MODE,
     MONGODB_URI: text(env, "MONGODB_URI", undefined),
     OPENAI_API_KEY: text(env, "OPENAI_API_KEY", undefined),
     OPENAI_MODEL: text(env, "OPENAI_MODEL", "gpt-6-luna"),
