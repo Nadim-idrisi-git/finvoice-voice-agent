@@ -6,8 +6,8 @@ A standalone, voice-first financial assistant using synthetic INR records. It pr
 
 Requirements: Node.js 20+, npm, and MongoDB (optional for the seed command; the app reads its in-memory synthetic fixture).
 
-1. Copy `.env.example` to `.env` and set a unique `SESSION_SECRET`.
-2. Run `npm install` and `npm run dev`.
+1. Copy `.env.example` to `.env`. The defaults work for local development.
+2. Run `npm install` and `npm run dev`. For browser tests, run `npx playwright install chromium` once.
 3. Open http://localhost:5173. The API runs on http://localhost:4100.
 4. Optional: set `GEMINI_API_KEY` to enable Gemini Live. No provider key is needed for text-based synthetic demo interaction.
 

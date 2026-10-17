@@ -10,7 +10,7 @@ import mongoose from "mongoose";
 import { actionSchema, confirmationSchema, messageSchema } from "@finance-agent/shared";
 import { z } from "zod";
 import { DEMO_USER, createTransactions, syntheticBills, syntheticEmis } from "./data/seed.js";
-import { categoryTotals, compareMonths, currentMonth, expenseTotal, merchantTotals, previousMonth, recurringSubscriptions, unusualSpending } from "./modules/analytics.js";
+import { categoryTotals, compareMonths, currentMonth, expenseTotal, incomeTotal, merchantTotals, previousMonth, recurringSubscriptions, rupees, unusualSpending } from "./modules/analytics.js";
 import { answerFinancialQuestion } from "./modules/agent.js";
 const environmentSchema = z.object({ NODE_ENV: z.enum(["development", "test", "production"]).default("development"), PORT: z.coerce.number().int().positive().max(65535).default(4100), WEB_ORIGIN: z.string().url().default("http://localhost:5173"), MONGODB_URI: z.string().optional(), GEMINI_API_KEY: z.string().optional(), GEMINI_LIVE_MODEL: z.string().min(1).default("gemini-3.8-live"), GEMINI_VOICE: z.string().min(1).max(60).default("Kore") });
 const env = environmentSchema.parse(process.env);
@@ -38,6 +38,16 @@ app.use("/api/v1", (_req, res, next) => {
 });
 app.use("/api/v1/voice/session", rateLimit({ windowMs: 6e4, limit: 3, standardHeaders: "draft-7", legacyHeaders: false }));
 const owned = (items) => items.filter((i) => i.ownerId === DEMO_USER.id);
+const withRupees = (value) => {
+  if (Array.isArray(value)) return value.map(withRupees);
+  if (!value || typeof value !== "object") return value;
+  const out = {};
+  for (const [key, v] of Object.entries(value)) {
+    out[key] = withRupees(v);
+    if (key.endsWith("Paise") && typeof v === "number") out[`${key.slice(0, -5)}Rupees`] = rupees(v);
+  }
+  return out;
+};
 app.get("/api/v1/session", (_req, res) => res.json({ user: DEMO_USER, mode: "synthetic-demo" }));
 app.get("/api/v1/dashboard", (_req, res) => {
   const month = currentMonth();
@@ -50,19 +60,19 @@ app.get("/api/v1/dashboard", (_req, res) => {
   }
   res.json({ user: DEMO_USER, month, totalPaise: total, previousTotalPaise: compare.previousPaise, changePercent: compare.changePercent, categories: categoryTotals(rows, month), transactions: rows.filter((t) => t.occurredAt.slice(0, 7) === month).sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 8), dailySpending: [...dayTotals].sort((a, b) => a[0] - b[0]).map(([day, amountPaise]) => ({ day, amountPaise })), unusual: unusualSpending(rows), subscriptions: recurringSubscriptions(rows), bills: owned(syntheticBills), emis: owned(syntheticEmis), synthetic: true });
 });
-app.get("/api/v1/analytics/summary", (_req, res) => res.json({ month: currentMonth(), totalPaise: expenseTotal(rows, currentMonth()), incomePaise: rows.filter((t) => t.occurredAt.slice(0, 7) === currentMonth() && t.kind === "income").reduce((s, t) => s + t.amountPaise, 0) }));
-app.get("/api/v1/analytics/categories", (_req, res) => res.json(categoryTotals(rows, currentMonth())));
+app.get("/api/v1/analytics/summary", (_req, res) => res.json(withRupees({ month: currentMonth(), totalPaise: expenseTotal(rows, currentMonth()), incomePaise: incomeTotal(rows, currentMonth()) })));
+app.get("/api/v1/analytics/categories", (_req, res) => res.json(withRupees(categoryTotals(rows, currentMonth()))));
 app.get("/api/v1/analytics/month", (req, res) => {
   const month = typeof req.query.month === "string" ? req.query.month : "";
   if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5)) < 1 || Number(month.slice(5)) > 12) return res.status(400).json({ error: "A valid YYYY-MM month is required." });
   res.json({ month, totalPaise: expenseTotal(rows, month), categories: categoryTotals(rows, month) });
 });
-app.get("/api/v1/analytics/compare", (_req, res) => res.json(compareMonths(rows, currentMonth(), previousMonth(currentMonth()))));
-app.get("/api/v1/analytics/merchants", (_req, res) => res.json(merchantTotals(rows, currentMonth())));
-app.get("/api/v1/analytics/unusual", (_req, res) => res.json(unusualSpending(rows)));
-app.get("/api/v1/subscriptions", (_req, res) => res.json(recurringSubscriptions(rows)));
-app.get("/api/v1/bills", (_req, res) => res.json(owned(syntheticBills)));
-app.get("/api/v1/emis", (_req, res) => res.json(owned(syntheticEmis)));
+app.get("/api/v1/analytics/compare", (_req, res) => res.json(withRupees(compareMonths(rows, currentMonth(), previousMonth(currentMonth())))));
+app.get("/api/v1/analytics/merchants", (_req, res) => res.json(withRupees(merchantTotals(rows, currentMonth()))));
+app.get("/api/v1/analytics/unusual", (_req, res) => res.json(withRupees(unusualSpending(rows))));
+app.get("/api/v1/subscriptions", (_req, res) => res.json(withRupees(recurringSubscriptions(rows))));
+app.get("/api/v1/bills", (_req, res) => res.json(withRupees(owned(syntheticBills))));
+app.get("/api/v1/emis", (_req, res) => res.json(withRupees(owned(syntheticEmis))));
 app.get("/api/v1/actions", (_req, res) => res.json(owned(actions)));
 app.get("/api/v1/audit", (_req, res) => res.json(owned(audit)));
 app.get("/api/v1/reminders", (_req, res) => res.json(owned(reminders)));
@@ -117,17 +127,17 @@ app.post("/api/v1/voice/session", async (_req, res) => {
   if (!env.GEMINI_API_KEY) return res.status(503).json({ error: "Live voice is not configured. Add GEMINI_API_KEY on the API server. Text assistant remains available." });
   try {
     const model = env.GEMINI_LIVE_MODEL;
-    const instruction = `You are a concise, warm financial assistant for ${DEMO_USER.name}. Speak naturally in English, Hindi, or Hinglish matching the user. All money is INR. These are synthetic demo records. Use tools for financial facts; never guess amounts. Explain there is no real bank connection. You may propose reminders or alerts, but never say an action is created until the app confirms it. Do not initiate money movement or claim subscription cancellation.`;
+    const instruction = `You are a concise, warm financial assistant for ${DEMO_USER.name}. Speak naturally in English, Hindi, or Hinglish matching the user. All money is INR. These are synthetic demo records. Use tools for financial facts; never guess amounts. Tool results include fields ending in Rupees that are already formatted in INR; speak those values and never read fields ending in Paise aloud as rupees. Explain there is no real bank connection. You may propose reminders or alerts, but never say an action is created until the app confirms it. Do not initiate money movement or claim subscription cancellation.`;
     const voice = env.GEMINI_VOICE;
     const liveConnectConstraints = { model: `models/${model}`, config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }, systemInstruction: { parts: [{ text: instruction }] }, inputAudioTranscription: {}, outputAudioTranscription: {}, sessionResumption: {}, tools: [{ functionDeclarations: financialTools }] } };
-    const googleResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/auth_tokens", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY }, body: JSON.stringify({ uses: 1, expireTime: new Date(Date.now() + 30 * 6e4).toISOString(), newSessionExpireTime: new Date(Date.now() + 6e4).toISOString(), liveConnectConstraints }) });
+    const googleResponse = await fetch("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY }, body: JSON.stringify({ uses: 1, expireTime: new Date(Date.now() + 30 * 6e4).toISOString(), newSessionExpireTime: new Date(Date.now() + 6e4).toISOString(), liveConnectConstraints }) });
     if (!googleResponse.ok) {
       log.warn({ status: googleResponse.status }, "Voice token provider rejected request");
       return res.status(502).json({ error: "The voice provider could not initialize a session. Check model access and API configuration." });
     }
     const token = await googleResponse.json();
     if (!token.name) return res.status(502).json({ error: "Voice provider returned an invalid session token." });
-    res.json({ token: token.name, model, voice, websocketUrl: "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained", expiresAt: token.expireTime, modalities: ["AUDIO"], transport: "WebSocket" });
+    res.json({ token: token.name, model, voice, systemInstruction: instruction, tools: financialTools, websocketUrl: "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained", expiresAt: token.expireTime, modalities: ["AUDIO"], transport: "WebSocket" });
   } catch (error) {
     log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Voice session initialization failed");
     res.status(502).json({ error: "Could not initialize voice session." });

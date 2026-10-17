@@ -51,4 +51,10 @@ describe("versioned API", () => {
     const bad = await request(app).get("/api/v1/analytics/month?month=2026-13");
     expect(bad.status).toBe(400);
   });
+  it("adds formatted rupee fields next to paise amounts for voice tools", async () => {
+    const summary = await request(app).get("/api/v1/analytics/summary");
+    expect(summary.body.totalRupees).toMatch(/^\u20B9[\d,.]+$/);
+    const bills = await request(app).get("/api/v1/bills");
+    expect(bills.body[0].amountRupees).toBe("\u20B92,350");
+  });
 });

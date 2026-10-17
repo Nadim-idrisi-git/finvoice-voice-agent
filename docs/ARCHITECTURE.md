@@ -14,6 +14,7 @@ The browser handles the real-time media session and provider-native VAD; server-
 
 - Modular monolith: one API process keeps action authorization and calculations close together.
 - Monetary values use integer paise; currency is explicitly INR.
+- Unusual-spend candidates: an expense is flagged when it exceeds 4× the median of the other expenses in its category (at least 2 others required). Results are review candidates, never fraud determinations.
 - Synthetic fixture is canonical for the local demo; Mongo is an optional future persistence path and seed target.
 - Provider-independent `VoiceProvider` interface keeps voice transport swappable.
 - Demo session mode is local-only. Production authentication, persistent multi-tenant identity, and user isolation must be completed before deployment with real users.

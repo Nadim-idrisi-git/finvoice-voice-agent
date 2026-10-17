@@ -2,7 +2,7 @@
 
 ## Local verification
 
-- Unit and API tests: passed (37 tests across shared, API, and web workspaces).
+- Unit and API tests: passed (28 tests across shared, API, and web workspaces).
 - JavaScript syntax checks: passed for the API and shared package.
 - Production build: passed for shared, API, and web workspaces.
 - Browser tests: passed (2 flows: Hinglish spending question with confirmed reminder, and previous-month analytics).

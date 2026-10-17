@@ -22,5 +22,32 @@ describe("grounded assistant intent routing", () => {
     const answer = answerFinancialQuestion("Identify unusual spending", records);
     expect(answer.intent).toBe("unusual_spending");
     expect(answer.answer).toContain("not a fraud finding");
+    expect(answer.data.map((x) => x.id)).toEqual(["tx-synthetic-outlier"]);
+  });
+  it("names the requested month instead of saying this month", () => {
+    const answer = answerFinancialQuestion("How much did I spend in 2026-08?", records);
+    expect(answer.data.month).toBe("2026-08");
+    expect(answer.answer).toContain("in August 2026");
+    expect(answer.answer).not.toContain("this month");
+    expect(answerFinancialQuestion("Compare 2026-08 with previous month", records).answer).toContain("July 2026");
+  });
+  it("breaks spending down by category and sums to the monthly total", () => {
+    const answer = answerFinancialQuestion("Break down my spending by category", records);
+    expect(answer.intent).toBe("category_breakdown");
+    expect(answer.data.categories.length).toBeGreaterThan(1);
+    expect(answer.data.totalPaise).toBe(answerFinancialQuestion("How much did I spend this month?", records).data.amountPaise);
+  });
+  it("answers income questions", () => {
+    const answer = answerFinancialQuestion("Show me my income", records);
+    expect(answer.intent).toBe("income");
+    expect(answer.answer).toContain("\u20B9");
+  });
+  it("lists every upcoming bill in due-date order", () => {
+    const answer = answerFinancialQuestion("What bills are coming up?", records);
+    expect(answer.data.map((b) => b.id)).toEqual(["bill-power", "bill-internet", "bill-phone"]);
+    for (const bill of answer.data) expect(answer.answer).toContain(bill.name);
+  });
+  it("rejects impossible months", () => {
+    expect(answerFinancialQuestion("How much did I spend in 2026-13?", records).intent).toBe("unknown");
   });
 });

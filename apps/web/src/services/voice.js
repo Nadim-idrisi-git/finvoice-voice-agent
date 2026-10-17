@@ -1,5 +1,5 @@
 import { api } from "./api";
-const toolNames = /* @__PURE__ */ new Set(["get_spending_summary", "get_category_breakdown", "compare_monthly_spending", "find_recurring_subscriptions", "get_upcoming_bills", "get_emi_schedule"]);
+const actionTools = /* @__PURE__ */ new Set(["create_reminder", "configure_spending_alert", "prepare_subscription_action"]);
 const transitions = {
   IDLE: ["CONNECTING", "DISCONNECTED"],
   CONNECTING: ["LISTENING", "ERROR", "DISCONNECTED", "RECONNECTING"],
@@ -40,6 +40,7 @@ class LiveVoiceSession {
   ignoreAssistantOutput = false;
   modelTurnComplete = false;
   nextPlaybackTime = 0;
+  toolNames = /* @__PURE__ */ new Set();
   machine = new VoiceSessionStateMachine();
   transition(next) {
     if (this.machine.transition(next)) this.callbacks.state(next);
@@ -48,23 +49,13 @@ class LiveVoiceSession {
     this.transition("CONNECTING");
     try {
       const config = await api.voiceSession();
-      const { GoogleGenAI, Modality, Type } = await import("@google/genai");
+      const { GoogleGenAI, Modality } = await import("@google/genai");
+      this.toolNames = new Set((config.tools ?? []).map((t) => t.name));
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
       this.context = new AudioContext();
       await this.context.audioWorklet.addModule("/pcm-worklet.js");
-      const ai = new GoogleGenAI({ apiKey: config.token });
-      this.session = await ai.live.connect({ model: config.model, config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: config.voice } } }, systemInstruction: "You are a concise, warm financial assistant for Nadim Idrisi. Speak naturally in English, Hindi, or Hinglish matching the user. All money is INR. These are synthetic demo records. Use tools for financial facts; never guess amounts. Explain there is no real bank connection. You may propose reminders or alerts, but never say an action is created until the app confirms it. Do not initiate money movement or claim subscription cancellation.", inputAudioTranscription: {}, outputAudioTranscription: {}, sessionResumption: {}, tools: [{ functionDeclarations: [
-        { name: "get_spending_summary", description: "Get the current month total expenses in INR.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "get_category_breakdown", description: "Get current month spending by category.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "compare_monthly_spending", description: "Compare this month with the previous month.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "find_recurring_subscriptions", description: "Find recurring subscription merchants and average cost.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "get_upcoming_bills", description: "List upcoming synthetic bills.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "get_emi_schedule", description: "List upcoming synthetic EMI installments.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "get_unusual_spending", description: "Get deterministic unusual spending candidates from synthetic history; these are not fraud findings.", parameters: { type: Type.OBJECT, properties: {} } },
-        { name: "create_reminder", description: "Prepare an in-app reminder proposal. User confirmation is still required.", parameters: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, details: { type: Type.STRING } }, required: ["title", "details"] } },
-        { name: "configure_spending_alert", description: "Prepare a spending alert proposal. User confirmation is still required.", parameters: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, details: { type: Type.STRING } }, required: ["title", "details"] } },
-        { name: "prepare_subscription_action", description: "Prepare a simulated subscription workflow; no cancellation is executed.", parameters: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, details: { type: Type.STRING } }, required: ["title", "details"] } }
-      ] }] }, callbacks: { onmessage: (message) => {
+      const ai = new GoogleGenAI({ apiKey: config.token, httpOptions: { apiVersion: "v1alpha" } });
+      this.session = await ai.live.connect({ model: config.model, config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: config.voice } } }, systemInstruction: config.systemInstruction, inputAudioTranscription: {}, outputAudioTranscription: {}, sessionResumption: {}, tools: [{ functionDeclarations: config.tools ?? [] }] }, callbacks: { onmessage: (message) => {
         void this.onMessage(message);
       }, onerror: (event) => {
         this.transition("ERROR");
@@ -120,11 +111,11 @@ class LiveVoiceSession {
     if (calls.length) {
       this.transition("PROCESSING");
       for (const call of calls) {
-        if (!call.name || !toolNames.has(call.name) && !["get_unusual_spending", "create_reminder", "configure_spending_alert", "prepare_subscription_action"].includes(call.name)) continue;
+        if (!call.name || !this.toolNames.has(call.name)) continue;
         try {
           const result = await this.runTool(call.name, call.args ?? {});
           if (current !== this.generation || this.disposed) return;
-          if (["create_reminder", "configure_spending_alert", "prepare_subscription_action"].includes(call.name)) this.callbacks.actionProposed?.();
+          if (actionTools.has(call.name)) this.callbacks.actionProposed?.();
           this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: { result } }] });
         } catch {
           this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: { error: "Tool unavailable. Please try again." } }] });
@@ -144,7 +135,7 @@ class LiveVoiceSession {
   async runTool(name, args) {
     const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4100/api/v1";
     const path = { get_spending_summary: "/analytics/summary", get_category_breakdown: "/analytics/categories", compare_monthly_spending: "/analytics/compare", find_recurring_subscriptions: "/subscriptions", get_upcoming_bills: "/bills", get_emi_schedule: "/emis", get_unusual_spending: "/analytics/unusual" };
-    const isAction = ["create_reminder", "configure_spending_alert", "prepare_subscription_action"].includes(name);
+    const isAction = actionTools.has(name);
     const response = await fetch(`${apiUrl}${isAction ? "/actions" : path[name]}`, isAction ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: name === "create_reminder" ? "reminder" : name === "configure_spending_alert" ? "spending_alert" : "subscription_workflow", title: typeof args.title === "string" ? args.title.slice(0, 100) : "Assistant proposal", details: typeof args.details === "string" ? args.details.slice(0, 500) : "Review this proposed action." }) } : void 0);
     if (!response.ok) throw new Error("Tool failed");
     return response.json();
