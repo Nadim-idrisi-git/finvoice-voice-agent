@@ -2,23 +2,44 @@ import { api } from "./api";
 import { VoiceSessionStateMachine } from "./voiceState";
 
 /**
- * Live voice with the OpenAI Realtime API over WebRTC.
+ * Voice call with ElevenLabs for speech only; the answer comes from the backend agent.
  *
- * 1. The backend mints a short-lived client secret (the API key never reaches the browser).
- * 2. The browser opens a peer connection: microphone audio goes up, model audio comes back
- *    on a remote track, and JSON events flow over the "oai-events" data channel.
- * 3. When the model calls a tool, the call is forwarded to the backend tool registry and the
- *    result is sent back on the data channel. Interruption is handled by the server: it
- *    truncates unplayed audio when the user starts speaking.
+ *   mic → voice-activity detection → one utterance (MediaRecorder)
+ *       → POST /voice/transcribe (ElevenLabs Scribe, Hindi/English)
+ *       → POST /assistant/message { channel: "voice" } (OpenAI agent + validator, before speaking)
+ *       → GET /voice/speech/:id (ElevenLabs TTS stream of that validated answer) → <audio>
+ *
+ * Interruption: speaking over the assistant stops playback at once and bumps `generation`, so any
+ * in-flight transcript, answer, or audio from the old turn is discarded. Stopping audio never undoes
+ * an action the backend already recorded. If ElevenLabs cannot speak, the browser's Web Speech API
+ * reads the same validated answer.
  */
+
+const POLL_MS = 40;
+const START_LEVEL = 0.03; // RMS that counts as speech
+const BARGE_IN_FACTOR = 1.8; // louder bar while the assistant is speaking (echo)
+const START_MS = 120; // sustained speech before an utterance starts
+const BARGE_IN_MS = 250; // sustained speech before interrupting the assistant
+const SILENCE_MS = 900; // quiet time that ends an utterance
+const MIN_UTTERANCE_MS = 350;
+
 export class LiveVoiceSession {
   machine = new VoiceSessionStateMachine();
-  pc = null;
-  channel = null;
   stream = null;
+  context = null;
+  analyser = null;
+  samples = null;
+  recorder = null;
   audio = null;
+  timer = 0;
+  generation = 0;
+  busy = false;
+  fallbackSpeaking = false;
+  loudSince = 0;
+  lastVoiceAt = 0;
+  utteranceStartedAt = 0;
   disposed = false;
-  lastUserTranscript = "";
+  recognition = null; // Web Speech API fallback when ElevenLabs speech-to-text is unavailable
 
   constructor(callbacks) {
     this.callbacks = callbacks;
@@ -31,139 +52,200 @@ export class LiveVoiceSession {
   async start() {
     this.transition("CONNECTING");
     try {
-      const session = await api.voiceSession();
+      const status = await api.voiceStatus();
+      if (!status.configured) throw new Error("Voice is not configured. Add ELEVENLABS_API_KEY and OPENAI_API_KEY on the backend.");
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
       if (this.disposed) return this.release();
-
-      this.pc = new RTCPeerConnection();
-      this.audio = document.createElement("audio");
-      this.audio.autoplay = true;
-      this.pc.ontrack = (event) => (this.audio.srcObject = event.streams[0]);
-      this.pc.onconnectionstatechange = () => {
-        if (["failed", "disconnected"].includes(this.pc?.connectionState) && !this.disposed) {
-          this.fail("The voice connection dropped. Start voice again to reconnect.");
-        }
-      };
-      this.pc.addTrack(this.stream.getAudioTracks()[0], this.stream);
-
-      this.channel = this.pc.createDataChannel("oai-events");
-      this.channel.onopen = () => {
-        this.transition("LISTENING");
-        // The agent opens the call ("Sunday money call") instead of waiting for the user.
-        this.send({ type: "response.create" });
-      };
-      this.channel.onmessage = (event) => void this.onEvent(JSON.parse(event.data));
-      this.channel.onclose = () => !this.disposed && this.transition("DISCONNECTED");
-
-      const offer = await this.pc.createOffer();
-      await this.pc.setLocalDescription(offer);
-      const response = await fetch(session.callsUrl, {
-        method: "POST",
-        body: offer.sdp,
-        headers: { Authorization: `Bearer ${session.clientSecret}`, "Content-Type": "application/sdp" },
-      });
-      if (!response.ok) throw new Error("OpenAI could not start the voice call. Check the realtime model and key.");
-      await this.pc.setRemoteDescription({ type: "answer", sdp: await response.text() });
+      this.context = new AudioContext();
+      this.analyser = this.context.createAnalyser();
+      this.analyser.fftSize = 1024;
+      this.samples = new Float32Array(this.analyser.fftSize);
+      this.context.createMediaStreamSource(this.stream).connect(this.analyser);
+      this.audio = new Audio();
+      this.transition("LISTENING");
+      this.timer = setInterval(() => this.tick(), POLL_MS);
+      // The agent opens the call with the weekly briefing.
+      void this.respond("The call has started.", this.generation);
     } catch (error) {
-      const name = error instanceof Error ? error.name : "";
-      this.fail(
-        name === "NotAllowedError"
-          ? "Microphone permission was denied. Allow it in your browser to use voice."
-          : error instanceof Error
-            ? error.message
-            : "Could not start voice.",
-      );
+      const denied = error instanceof Error && error.name === "NotAllowedError";
+      this.fail(denied ? "Microphone permission was denied. Allow it to use voice." : error instanceof Error ? error.message : "Could not start voice.");
     }
   }
 
-  send(event) {
-    if (this.channel?.readyState === "open") this.channel.send(JSON.stringify(event));
+  speaking() {
+    return this.fallbackSpeaking || (this.audio && !this.audio.paused && !this.audio.ended);
   }
 
-  async onEvent(event) {
-    switch (event.type) {
-      case "input_audio_buffer.speech_started":
-        if (this.machine.state === "ASSISTANT_SPEAKING") this.transition("INTERRUPTED");
-        this.transition("USER_SPEAKING");
-        break;
-      case "input_audio_buffer.speech_stopped":
-        this.transition("PROCESSING");
-        break;
-      case "conversation.item.input_audio_transcription.completed":
-        if (event.transcript?.trim()) {
-          this.lastUserTranscript = event.transcript.trim();
-          this.callbacks.transcript("you", this.lastUserTranscript);
-        }
-        break;
-      case "output_audio_buffer.started":
-        this.transition("ASSISTANT_SPEAKING");
-        break;
-      case "output_audio_buffer.stopped":
-      case "output_audio_buffer.cleared":
-        this.transition("LISTENING");
-        break;
-      case "response.output_audio_transcript.done":
-        if (event.transcript?.trim()) {
-          this.callbacks.transcript("assistant", event.transcript.trim());
-          void this.validateSpoken(event.transcript.trim());
-        }
-        break;
-      case "response.done":
-        await this.runToolCalls(event.response?.output ?? []);
-        break;
-      case "error":
-        this.callbacks.error(event.error?.message ?? "The voice provider reported an error.");
-        break;
+  level() {
+    this.analyser.getFloatTimeDomainData(this.samples);
+    let sum = 0;
+    for (const v of this.samples) sum += v * v;
+    return Math.sqrt(sum / this.samples.length);
+  }
+
+  /** Voice-activity detection: starts and ends utterances, and interrupts the assistant. */
+  tick() {
+    if (this.disposed || !this.analyser) return;
+    const now = performance.now();
+    const assistantActive = this.speaking() || this.busy;
+    const loud = this.level() > (this.speaking() ? START_LEVEL * BARGE_IN_FACTOR : START_LEVEL);
+    if (loud) {
+      this.lastVoiceAt = now;
+      this.loudSince ||= now;
+    } else this.loudSince = 0;
+
+    if (this.recognition) {
+      // Browser recognition handles utterances; we only stop the assistant when the user talks over it.
+      if (this.speaking() && loud && now - this.loudSince > BARGE_IN_MS) this.interrupt();
+      return;
+    }
+    if (!this.recorder && loud && now - this.loudSince > (assistantActive ? BARGE_IN_MS : START_MS)) {
+      if (assistantActive) this.interrupt();
+      this.beginUtterance(now);
+    } else if (this.recorder && now - this.lastVoiceAt > SILENCE_MS) {
+      this.endUtterance();
     }
   }
 
-  /** Runs every function call in a finished response, returns results, then asks the model to continue. */
-  async runToolCalls(output) {
-    const calls = output.filter((item) => item.type === "function_call");
-    if (!calls.length) return;
-    this.transition("PROCESSING");
-    for (const call of calls) {
-      let result;
-      try {
-        const { result: data, proposesAction } = await api.runTool(call.name, JSON.parse(call.arguments || "{}"), call.call_id);
-        if (proposesAction) this.callbacks.actionProposed?.();
-        result = data;
-      } catch (error) {
-        result = { error: error instanceof Error ? error.message : "Tool unavailable. Please try again." };
-      }
+  interrupt() {
+    this.generation++; // discard anything still in flight from the previous turn
+    this.busy = false;
+    this.stopAudio();
+    this.transition("INTERRUPTED");
+  }
+
+  beginUtterance(now) {
+    const chunks = [];
+    const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"].find((t) => MediaRecorder.isTypeSupported(t));
+    const recorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : undefined);
+    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    recorder.onstop = () => {
+      const duration = this.lastVoiceAt - this.utteranceStartedAt;
       if (this.disposed) return;
-      this.send({
-        type: "conversation.item.create",
-        item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result) },
-      });
-    }
-    this.send({ type: "response.create" });
+      if (duration < MIN_UTTERANCE_MS) return this.transition("LISTENING");
+      void this.handleUtterance(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }), this.generation);
+    };
+    this.recorder = recorder;
+    this.utteranceStartedAt = now - this.loudSince > 0 ? this.loudSince : now;
+    recorder.start();
+    this.transition("USER_SPEAKING");
   }
 
-  /** Checks a spoken answer against server-side tool results; asks the model to correct unsupported amounts. */
-  async validateSpoken(transcript) {
+  endUtterance() {
+    const recorder = this.recorder;
+    this.recorder = null;
+    if (recorder?.state === "recording") recorder.stop();
+  }
+
+  async handleUtterance(blob, generation) {
+    this.busy = true;
+    this.transition("PROCESSING");
     try {
-      const check = await api.validateVoice(transcript, this.lastUserTranscript);
-      if (check.ok || this.disposed) return;
-      const problems = [
-        check.unsupportedAmounts.length && `you said ${check.unsupportedAmounts.join(", ")}, which is not in any tool result`,
-        check.unsupportedSuccess && "you said something was done, but no action is confirmed",
-      ].filter(Boolean);
-      this.callbacks.transcript("assistant", "\u26a0\ufe0f Checking that again: I may have misstated something.");
-      this.send({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "system",
-          content: [{ type: "input_text", text: `Validation failed: ${problems.join("; ")}. Briefly correct yourself using only tool values, or say you can't verify it.` }],
-        },
-      });
-      this.send({ type: "response.create" });
-    } catch {
-      // Validation is best-effort for voice; the text path validates before answering.
+      const { text } = await api.transcribe(blob);
+      if (generation !== this.generation || this.disposed) return;
+      if (!text) {
+        this.busy = false;
+        return this.transition("LISTENING");
+      }
+      this.callbacks.transcript("you", text);
+      await this.respond(text, generation);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      this.busy = false;
+      const message = error instanceof Error ? error.message : "I couldn't hear that. Please try again.";
+      if (/ElevenLabs|voice provider/i.test(message) && this.startBrowserRecognition()) {
+        this.callbacks.notice?.(`${message} Using the browser's speech recognition instead; please repeat that.`);
+      } else this.callbacks.error(message);
+      this.transition("LISTENING");
     }
+  }
+
+  /** Fallback speech-to-text with the Web Speech API (Chrome: English or Hindi). Returns false if unsupported. */
+  startBrowserRecognition() {
+    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!Recognition) return false;
+    const recognition = new Recognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const result = event.results[event.results.length - 1];
+      const text = result?.[0]?.transcript?.trim();
+      if (!text || this.disposed) return;
+      if (this.speaking() || this.busy) this.interrupt();
+      this.callbacks.transcript("you", text);
+      void this.respond(text, this.generation);
+    };
+    // Recognition stops by itself after silence; keep it running for the whole call.
+    recognition.onend = () => !this.disposed && this.recognition === recognition && recognition.start();
+    this.recognition = recognition;
+    recognition.start();
+    return true;
+  }
+
+  /** Gets a validated answer from the backend agent and speaks it. */
+  async respond(text, generation) {
+    this.busy = true;
+    this.transition("PROCESSING");
+    try {
+      const reply = await api.message(text, "voice");
+      if (generation !== this.generation || this.disposed) return;
+      this.callbacks.transcript("assistant", reply.answer);
+      if (reply.actionProposal) this.callbacks.actionProposed?.();
+      await this.speak(reply, generation);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      this.callbacks.error(error instanceof Error ? error.message : "The assistant is unavailable right now.");
+      this.busy = false;
+      this.transition("LISTENING");
+    }
+  }
+
+  async speak(reply, generation) {
+    this.busy = false;
+    this.transition("ASSISTANT_SPEAKING");
+    const done = () => generation === this.generation && !this.disposed && this.transition("LISTENING");
+    if (reply.speechId) {
+      try {
+        this.audio.src = api.speechUrl(reply.speechId);
+        this.audio.onended = done;
+        await this.audio.play();
+        await new Promise((resolve, reject) => {
+          this.audio.onended = () => (done(), resolve());
+          this.audio.onerror = () => reject(new Error("ElevenLabs audio failed"));
+        });
+        return;
+      } catch {
+        if (generation !== this.generation || this.disposed) return;
+        this.callbacks.notice?.("ElevenLabs couldn't speak this reply (check plan or quota). Using the browser voice instead.");
+      }
+    }
+    this.speakWithBrowser(reply.answer, generation, done);
+  }
+
+  /** Fallback: Web Speech API reads the same validated answer. */
+  speakWithBrowser(text, generation, done) {
+    if (!("speechSynthesis" in window)) return done();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = /[ऀ-ॿ]/.test(text) ? "hi-IN" : "en-IN";
+    utterance.onend = utterance.onerror = () => {
+      this.fallbackSpeaking = false;
+      done();
+    };
+    this.fallbackSpeaking = true;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  stopAudio() {
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.removeAttribute("src");
+      this.audio.load();
+    }
+    if (this.fallbackSpeaking) window.speechSynthesis.cancel();
+    this.fallbackSpeaking = false;
   }
 
   fail(message) {
@@ -174,11 +256,16 @@ export class LiveVoiceSession {
 
   release() {
     this.disposed = true;
-    this.channel?.close();
-    this.pc?.close();
+    this.generation++;
+    clearInterval(this.timer);
+    const recognition = this.recognition;
+    this.recognition = null;
+    recognition?.stop();
+    this.endUtterance();
+    this.stopAudio();
     this.stream?.getTracks().forEach((track) => track.stop());
-    if (this.audio) this.audio.srcObject = null;
-    this.channel = this.pc = this.stream = this.audio = null;
+    void this.context?.close().catch(() => {});
+    this.stream = this.context = this.analyser = this.audio = null;
   }
 
   async stop() {

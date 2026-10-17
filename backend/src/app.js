@@ -9,6 +9,7 @@ import { createMemoryStore } from "./store/memory.js";
 import { createProfileStore, loadProfile } from "./store/profile.js";
 import { createActionService } from "./services/actions.js";
 import { createOpenAIClient } from "./services/openai.js";
+import { createElevenLabsClient } from "./services/elevenlabs.js";
 import { financeRoutes } from "./routes/finance.js";
 import { actionRoutes } from "./routes/actions.js";
 import { assistantRoutes } from "./routes/assistant.js";
@@ -32,6 +33,14 @@ export function createApp({
   const app = express();
   const actions = createActionService(store);
   const openai = createOpenAIClient({ apiKey: config.OPENAI_API_KEY, fetch, log });
+  const voice = createElevenLabsClient({
+    apiKey: config.ELEVENLABS_API_KEY,
+    voiceId: config.ELEVENLABS_VOICE_ID,
+    ttsModel: config.ELEVENLABS_TTS_MODEL,
+    sttModel: config.ELEVENLABS_STT_MODEL,
+    fetch,
+    log,
+  });
   app.locals.databaseStatus = "synthetic-fixture";
 
   app.disable("x-powered-by");
@@ -56,6 +65,7 @@ export function createApp({
       database: app.locals.databaseStatus,
       store: store.kind,
       aiConfigured: openai.configured,
+      voiceConfigured: voice.configured,
     }),
   );
 
@@ -69,11 +79,12 @@ export function createApp({
     res.locals.user = store.user ?? DEMO_USER;
     next();
   });
-  app.use("/api/v1/voice/session", rateLimit({ limit: 3 }));
+  app.use("/api/v1/voice/transcribe", rateLimit({ limit: 40 }));
+  app.use("/api/v1/voice/speech", rateLimit({ limit: 40 }));
   app.use("/api/v1/assistant/message", rateLimit({ limit: config.ASSISTANT_RATE_LIMIT }));
   app.use("/api/v1", financeRoutes({ store }));
   app.use("/api/v1", actionRoutes({ actions }));
-  app.use("/api/v1", assistantRoutes({ store, actions, config, openai, log }));
+  app.use("/api/v1", assistantRoutes({ store, actions, config, openai, voice, log }));
 
   app.use((err, req, res, _next) => {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, requestId: req.id });

@@ -4,7 +4,7 @@
 
 1. **Grounded tools.** Every number comes from deterministic code over parsed SMS facts, each tied to an `sms_id`.
 2. **Answer validation (text, before display).** `services/validator.js` extracts every money amount in the answer and requires an exact match in this turn's tool results (or the user's own message); claims that something was "done" require a confirmed action. On failure: one corrective retry, then a fixed abstention message.
-3. **Answer validation (voice, right after speaking).** Spoken transcripts are checked against tool results the server produced for this user; on failure the model is told to correct itself and the UI shows a warning. Voice cannot be validated *before* audio plays.
+3. **Voice uses the same path.** Spoken answers come from the same agent with `channel: "voice"` and pass the validator *before* ElevenLabs speaks them.
 4. **Action guard.** `confirm_action` is rejected in text chat unless the user's message contains an explicit yes; drafts are deduplicated; voice tool calls are idempotent.
 5. **Evaluation suite** (`backend/eval/cases.json`, `npm run eval`) against the real model.
 

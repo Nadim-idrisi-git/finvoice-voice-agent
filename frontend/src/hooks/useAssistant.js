@@ -58,6 +58,7 @@ export function useAssistant({ onActionProposed }) {
         if (live.machine.state === "ERROR") setLiveSession(null);
       },
       actionProposed: () => onActionProposed("The assistant prepared an action. Review and confirm it in Actions."),
+      notice: (message) => setVoiceError(message),
     });
     setLiveSession(live);
     await live.start();

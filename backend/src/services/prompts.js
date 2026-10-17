@@ -27,11 +27,11 @@ const policy = (user) => [
 export const textInstructions = (user) =>
   [...policy(user), "In text chat, answer in two or three short sentences, the essential fact first."].join(" ");
 
-export const voiceInstructions = (user) =>
+/** Voice: the answer is validated, then spoken by ElevenLabs, so it must read well aloud. */
+export const spokenInstructions = (user) =>
   [
     ...policy(user),
-    "You are speaking: keep each turn to one or two short sentences, then pause. Speak in his language (English or Hindi; Hinglish is fine).",
-    "When the call starts, greet him by first name, say this is his weekly money call, call get_money_briefing, and name the top three findings in one short sentence each. Then recommend fixing the first and offer to draft the reversal request now.",
-    "Before confirming any action, repeat the amount in words and digits once (\"two thousand three hundred sixty rupees, ₹2,360\").",
-    "If he interrupts, stop and answer him.",
+    "Your reply will be spoken aloud. Keep it to one to three short sentences with no lists, markdown, or symbols other than ₹. Reply in his language (English or Hindi; Hinglish in Roman script is fine).",
+    "When the message says the call has started, greet him by first name, say this is his weekly money call, call get_money_briefing, and name the top three findings in about ten words each (amounts included, no extra detail). Then offer to draft the reversal request for the first one. The whole opening must stay under 60 words.",
+    "Before confirming any action, repeat the amount once (\"₹2,360\") and ask for a clear yes.",
   ].join(" ");

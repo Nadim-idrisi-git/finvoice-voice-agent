@@ -43,8 +43,14 @@ describe("versioned API (no OpenAI key)", () => {
   it("returns 404 for an unknown action", async () => {
     assert.equal((await api.request("/api/v1/actions/nope/confirm", { body: { confirmation: true } })).status, 404);
   });
-  it("does not issue a voice session without an OpenAI key", async () => {
-    assert.equal((await api.request("/api/v1/voice/session", { body: {} })).status, 503);
+  it("reports voice as not configured and refuses to transcribe without an ElevenLabs key", async () => {
+    assert.equal((await api.request("/api/v1/voice/status")).body.configured, false);
+    const response = await fetch(api.base + "/api/v1/voice/transcribe", {
+      method: "POST",
+      headers: { "Content-Type": "audio/webm" },
+      body: new Uint8Array(2000),
+    });
+    assert.equal(response.status, 503);
   });
   it("validates requested month and returns historical synthetic categories", async () => {
     const good = await api.request("/api/v1/analytics/month?month=2026-09");
@@ -85,31 +91,51 @@ describe("guards", () => {
     assert.equal((await api.request("/api/v1/dashboard")).status, 503);
     await api.close();
   });
-  it("rate limits voice session requests", async () => {
-    const api = await startApp();
+  it("rate limits text chat per client", async () => {
+    const api = await startApp({ ASSISTANT_RATE_LIMIT: "2" });
     const statuses = [];
-    for (let i = 0; i < 4; i++) statuses.push((await api.request("/api/v1/voice/session", { body: {} })).status);
-    assert.deepEqual(statuses, [503, 503, 503, 429]);
+    for (let i = 0; i < 3; i++) statuses.push((await api.request("/api/v1/assistant/message", { body: { message: "hi" } })).status);
+    assert.deepEqual(statuses, [200, 200, 429]);
     await api.close();
   });
 });
 
-describe("OpenAI Realtime voice session", () => {
-  it("mints a client secret with server-owned instructions and tools, never exposing the API key", async () => {
-    const fetch = fakeFetch({ value: "ek_test", expires_at: 1790000000 });
-    const api = await startApp({ OPENAI_API_KEY: "sk-secret" }, { fetch });
-    const { status, body } = await api.request("/api/v1/voice/session", { body: {} });
+describe("ElevenLabs voice", () => {
+  const keys = { OPENAI_API_KEY: "sk-test", ELEVENLABS_API_KEY: "xi-secret", ELEVENLABS_VOICE_ID: "voice123" };
+  it("transcribes uploaded audio through Scribe without exposing the key", async () => {
+    const fetch = fakeFetch({ text: " Mera IDFC charge kitna hai? ", language_code: "hin", language_probability: 0.93 });
+    const api = await startApp(keys, { fetch });
+    const response = await globalThis.fetch(api.base + "/api/v1/voice/transcribe", {
+      method: "POST",
+      headers: { "Content-Type": "audio/webm;codecs=opus" },
+      body: new Uint8Array(4000),
+    });
+    const body = await response.json();
     await api.close();
-    assert.equal(status, 200);
-    assert.equal(body.clientSecret, "ek_test");
-    assert.equal(body.model, "gpt-realtime-2.1");
-    assert.equal(fetch.calls[0].url, "https://api.openai.com/v1/realtime/client_secrets");
-    assert.equal(fetch.calls[0].init.headers.Authorization, "Bearer sk-secret");
-    const session = fetch.calls[0].body.session;
-    assert.equal(session.type, "realtime");
-    assert.equal(session.audio.output.voice, "marin");
-    assert.ok(session.tools.some((t) => t.name === "get_upcoming_bills" && t.type === "function"));
-    assert.doesNotMatch(JSON.stringify(body), /sk-secret/);
+    assert.equal(body.text, "Mera IDFC charge kitna hai?");
+    assert.equal(body.languageCode, "hin");
+    assert.equal(fetch.calls[0].url, "https://api.elevenlabs.io/v1/speech-to-text");
+    assert.equal(fetch.calls[0].init.headers["xi-api-key"], "xi-secret");
+    assert.equal(fetch.calls[0].body.get("model_id"), "scribe_v2");
+    assert.doesNotMatch(JSON.stringify(body), /xi-secret/);
+  });
+  it("speaks only the validated answer this server produced, for its owner", async () => {
+    const message = { type: "message", content: [{ type: "output_text", text: "Hi Vivek, this is your money call." }] };
+    const audio = new ReadableStream({ start: (c) => (c.enqueue(new TextEncoder().encode("MP3DATA")), c.close()) });
+    const fetch = fakeFetch({ id: "r1", output: [message] }, { stream: audio });
+    const api = await startApp(keys, { fetch });
+    const reply = await api.request("/api/v1/assistant/message", { body: { message: "The call has started.", channel: "voice" } });
+    const speech = await globalThis.fetch(api.base + `/api/v1/voice/speech/${reply.body.speechId}`);
+    const bytes = await speech.text();
+    const missing = await globalThis.fetch(api.base + "/api/v1/voice/speech/not-issued");
+    await api.close();
+    assert.ok(reply.body.speechId);
+    assert.equal(speech.headers.get("content-type"), "audio/mpeg");
+    assert.equal(bytes, "MP3DATA");
+    assert.equal(fetch.calls[1].url, "https://api.elevenlabs.io/v1/text-to-speech/voice123/stream?output_format=mp3_44100_128");
+    assert.equal(fetch.calls[1].body.text, "Hi Vivek, this is your money call.");
+    assert.equal(fetch.calls[1].body.model_id, "eleven_flash_v2_5");
+    assert.equal(missing.status, 404);
   });
 });
 
@@ -124,17 +150,5 @@ describe("tool idempotency", () => {
     assert.equal(second.body.replayed, true);
     assert.equal(second.body.result.id, first.body.result.id);
     assert.equal(actions.body.length, 1);
-  });
-});
-
-describe("voice answer validation", () => {
-  it("accepts spoken amounts that tools returned and flags invented ones", async () => {
-    const api = await startApp();
-    await api.request("/api/v1/tools/get_upcoming_bills", { body: {} });
-    const good = await api.request("/api/v1/voice/validate", { body: { transcript: "Your electricity bill is ₹2,350." } });
-    const bad = await api.request("/api/v1/voice/validate", { body: { transcript: "Your electricity bill is ₹9,999." } });
-    await api.close();
-    assert.equal(good.body.ok, true);
-    assert.deepEqual(bad.body.unsupportedAmounts, ["₹9,999"]);
   });
 });
