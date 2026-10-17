@@ -1,10 +1,13 @@
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:4100/api/v1";
+// Accept VITE_API_URL with or without the /api/v1 suffix or a trailing slash.
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4100/api/v1").replace(/\/+$/, "").replace(/(\/api\/v1)?$/, "/api/v1");
 async function request(path, init) {
   const response = await fetch(`${API}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => {
+    throw new Error(`The API returned a non-JSON response (${response.status}). Check VITE_API_URL.`);
+  });
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
   return data;
 }
