@@ -23,7 +23,8 @@ export function chartSeries(daily, month) {
       (d) =>
         `${new Date(Date.UTC(year, monthNumber - 1, d)).toLocaleDateString("en-IN", { month: "short" })} ${String(d).padStart(2, "0")}`,
     );
-  return { line, labels };
+  const lastX = points.at(-1)[0];
+  return { line, labels, lastX };
 }
 export function donutGradient(categories) {
   const total = categories.reduce((s, c) => s + c.amountPaise, 0) || 1;

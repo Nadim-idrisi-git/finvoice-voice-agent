@@ -58,7 +58,7 @@ export function Overview({ dashboard, categories, total, change, loading, onAsk,
                     <stop offset="1" stopColor="#52b788" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <path d={`${graph.line} L620,88 L0,88 Z`} fill="url(#fill)" />
+                <path d={`${graph.line} L${graph.lastX.toFixed(1)},88 L0,88 Z`} fill="url(#fill)" />
                 <path d={graph.line} fill="none" stroke="#49a779" strokeWidth="2.4" vectorEffect="non-scaling-stroke" />
               </svg>
               <div className="flex justify-between text-[8px] text-[#a4ada7]">
@@ -161,8 +161,8 @@ export function Overview({ dashboard, categories, total, change, loading, onAsk,
           <div className={`${card} min-h-[200px] px-4 py-[15px] sm:min-h-[211px] xl:min-h-[224px]`}>
             <div className="flex items-start justify-between">
               <div>
-                <h3 className={cardTitle}>Coming up</h3>
-                <p className={cardSubtitle}>Your next bills & payments</p>
+                <h3 className={cardTitle}>Bills</h3>
+                <p className={cardSubtitle}>Latest reminder from each biller</p>
               </div>
             </div>
             {dashboard?.bills.slice(0, 3).map((bill, i) => (
@@ -173,14 +173,15 @@ export function Overview({ dashboard, categories, total, change, loading, onAsk,
                 <div className="flex flex-1 flex-col gap-1">
                   <b className="text-[9px]">{bill.name}</b>
                   <span className="text-[8px] text-[#929c96]">
-                    Due {new Date(bill.dueAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    {new Date(bill.dueAt) < new Date(`${dashboard.briefing?.asOf ?? dashboard.month}T23:59:59Z`) ? "Was due" : "Due"}{" "}
+                    {new Date(bill.dueAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                   </span>
                 </div>
                 <strong className="text-[9px]">{money(bill.amountPaise)}</strong>
               </div>
             ))}
             <button className={`${arrowLink} block pt-[11px]`} onClick={() => onAsk("What bills are coming up?")}>
-              View all upcoming <span className="pl-1">→</span>
+              Ask about my bills <span className="pl-1">→</span>
             </button>
           </div>
 

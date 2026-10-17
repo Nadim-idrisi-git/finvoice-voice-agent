@@ -1,7 +1,21 @@
 // Deterministic findings over the parsed SMS profile. Every finding carries the sms_ids it is based on,
 // so the agent can only state what the data backs up.
 
+import { formatRupees as inr } from "../lib/format.js";
+
 const DAY = 864e5;
+/** "BAJAJ FINANCE L" → "Bajaj Finance", "Groww Invest Te" → "Groww Invest": drop SMS-truncated tails, fix case. */
+export function cleanName(raw) {
+  const words = String(raw).replace(/\s+(Priv\w*|Pvt|Ltd|Limited)\b.*$/i, "").trim().split(/\s+/);
+  while (words.length > 1 && words.at(-1).length <= 2) words.pop();
+  const name = words.join(" ");
+  return name === name.toUpperCase() ? name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : name;
+}
+/** Readable biller names from bill-reminder SMS. */
+function cleanBiller(raw) {
+  if (/\(LIC\)|Life Insur/i.test(raw)) return "LIC premium";
+  return cleanName(String(raw).replace(/\s+connection with.*$/i, " broadband").replace(/\.\.\./g, ""));
+}
 /** "2026-10-08" → "8 Oct" for spoken and displayed titles. */
 const pretty = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 const day = (at) => at.slice(0, 10);
@@ -79,7 +93,7 @@ export function minimumBalanceTraps(facts) {
 export function recurringMandates(facts) {
   const groups = new Map();
   for (const f of facts.filter((f) => f.type === "upcoming" || (f.type === "debit" && f.via === "mandate"))) {
-    const name = f.counterparty.replace(/\s+(Priv\w*|Pvt)\b.*$/i, "").trim();
+    const name = cleanName(f.counterparty);
     groups.set(name, [...(groups.get(name) ?? []), f]);
   }
   return [...groups.entries()]
@@ -125,7 +139,7 @@ export function billsDue(facts) {
   const latest = new Map();
   for (const f of facts.filter((f) => f.type === "bill_due")) latest.set(f.counterparty.slice(0, 20), f);
   return [...latest.values()]
-    .map((f) => ({ biller: f.counterparty, amountPaise: f.amountPaise, dueOn: f.dueOn, noticedOn: day(f.at), evidence: [f.smsId] }))
+    .map((f) => ({ biller: cleanBiller(f.counterparty), amountPaise: f.amountPaise, dueOn: f.dueOn, noticedOn: day(f.at), evidence: [f.smsId] }))
     .sort((a, b) => (b.dueOn ?? b.noticedOn).localeCompare(a.dueOn ?? a.noticedOn))
     .slice(0, 6);
 }
@@ -145,8 +159,8 @@ function computeBriefing(profile) {
   for (const d of duplicateCharges(facts))
     findings.push({
       priority: 1,
-      title: `${d.bank} charged the same ₹${d.chargeAmountPaise / 100} fee ${d.timesCharged} times on ${pretty(d.date)}`,
-      whyItMatters: `${d.timesCharged - 1} of those look like duplicates: ₹${d.extraPaise / 100} that should be refunded.`,
+      title: `${d.bank} charged the same ${inr(d.chargeAmountPaise)} fee ${d.timesCharged} times on ${pretty(d.date)}`,
+      whyItMatters: `${d.timesCharged - 1} of those look like duplicates: ${inr(d.extraPaise)} worth asking the bank to reverse.`,
       suggestedAction: `Draft a reversal request to ${d.bank} for the duplicate charges.`,
       data: d,
     });
@@ -154,14 +168,15 @@ function computeBriefing(profile) {
   if (bounces.length) {
     const latest = bounces.at(-1);
     const sameAccount = bounces.filter((b) => b.account === latest.account);
-    const pullers = recurringMandates(facts).filter((m) => m.accounts.includes(latest.account));
+    // Only frequent pullers are worth naming (once a month or more).
+    const pullers = recurringMandates(facts).filter((m) => m.accounts.includes(latest.account) && m.perWeek >= 1);
     findings.push({
       priority: 2,
-      title: `Autopays are bouncing on ${latest.bank} account ${latest.account}: ${sameAccount.length} failed since ${pretty(sameAccount[0].date)}`,
+      title: `${sameAccount.length} autopays bounced on ${latest.bank} account ${latest.account} since ${pretty(sameAccount[0].date)}`,
       whyItMatters:
-        `Penalties so far: ₹${(Math.max(...sameAccount.map((b) => b.penaltyPaise)) / 100).toFixed(2)}.` +
+        `Penalty so far: ${inr(Math.max(...sameAccount.map((b) => b.penaltyPaise)))}.` +
         (pullers.length
-          ? ` ${pullers.map((m) => `${m.merchant} pulls about ${m.perWeek} times a week`).join("; ")} from this same account.`
+          ? ` ${pullers.map((m) => `${m.merchant} debits this account about ${Math.round(m.perWeek)} times a week`).join("; ")}.`
           : ""),
       suggestedAction: "Set a reminder to top up this account before the next mandate, or move the mandate to a funded account.",
       data: {
@@ -174,8 +189,8 @@ function computeBriefing(profile) {
   for (const t of minimumBalanceTraps(facts).slice(0, 1))
     findings.push({
       priority: 3,
-      title: `${t.bank} account ${t.account ?? ""} keeps missing its ₹${t.requiredAveragePaise / 100} minimum average balance`,
-      whyItMatters: `${t.warnings} warnings so far${t.feesPaidPaise ? ` and ₹${t.feesPaidPaise / 100} already paid in fees` : ""}.`,
+      title: `${t.bank} account ${t.account ?? ""} keeps missing its ${inr(t.requiredAveragePaise)} minimum balance`,
+      whyItMatters: `${t.warnings} warnings so far${t.feesPaidPaise ? ` and ${inr(t.feesPaidPaise)} already paid in fees` : ""}.`,
       suggestedAction: "Consider keeping the balance up, or moving to a zero-balance account.",
       data: t,
     });
