@@ -44,7 +44,6 @@ export function failedAutopays(facts) {
       account: f.account,
       date: day(f.at),
       amountPaise: f.amountPaise,
-      detail: f.text.slice(0, 160),
       penaltyPaise: sum(penalties),
       evidence: evidence([f, ...penalties]),
     };
@@ -132,7 +131,15 @@ export function billsDue(facts) {
 }
 
 /** The three things that matter most, ranked, for the opening of the money call. */
+const briefingCache = new WeakMap();
+
+/** Cached per profile object; the profile only changes when the dataset is re-ingested. */
 export function briefing(profile) {
+  if (!briefingCache.has(profile)) briefingCache.set(profile, computeBriefing(profile));
+  return briefingCache.get(profile);
+}
+
+function computeBriefing(profile) {
   const { facts } = profile;
   const findings = [];
   for (const d of duplicateCharges(facts))
@@ -157,7 +164,11 @@ export function briefing(profile) {
           ? ` ${pullers.map((m) => `${m.merchant} pulls about ${m.perWeek} times a week`).join("; ")} from this same account.`
           : ""),
       suggestedAction: "Set a reminder to top up this account before the next mandate, or move the mandate to a funded account.",
-      data: { bounces: sameAccount, mandatesOnAccount: pullers, evidence: [...new Set(sameAccount.flatMap((b) => b.evidence))] },
+      data: {
+        bounces: sameAccount.map(({ date, amountPaise, penaltyPaise }) => ({ date, amountPaise, penaltyPaise })),
+        mandatesOnAccount: pullers.map(({ merchant, perWeek, last30DaysPaise }) => ({ merchant, perWeek, last30DaysPaise })),
+        evidence: [...new Set(sameAccount.flatMap((b) => b.evidence))].slice(0, 6),
+      },
     });
   }
   for (const t of minimumBalanceTraps(facts).slice(0, 1))

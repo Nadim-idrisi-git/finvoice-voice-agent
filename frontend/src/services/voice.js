@@ -19,6 +19,7 @@ export class LiveVoiceSession {
   audio = null;
   disposed = false;
   lastUserTranscript = "";
+  pendingTranscripts = 0; // utterances whose transcript has not arrived yet
   responseActive = false; // OpenAI allows one response at a time per conversation
   responseQueued = false;
 
@@ -80,6 +81,13 @@ export class LiveVoiceSession {
     }
   }
 
+  async transcriptsSettled(maxMs = 2500) {
+    const started = performance.now();
+    while (this.pendingTranscripts > 0 && performance.now() - started < maxMs && !this.disposed) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
   /** Asks the model to respond now, or right after the current response finishes. */
   requestResponse() {
     if (this.responseActive) this.responseQueued = true;
@@ -101,9 +109,14 @@ export class LiveVoiceSession {
         this.transition("USER_SPEAKING");
         break;
       case "input_audio_buffer.speech_stopped":
+        this.pendingTranscripts++;
         this.transition("PROCESSING");
         break;
+      case "conversation.item.input_audio_transcription.failed":
+        this.pendingTranscripts = Math.max(0, this.pendingTranscripts - 1);
+        break;
       case "conversation.item.input_audio_transcription.completed":
+        this.pendingTranscripts = Math.max(0, this.pendingTranscripts - 1);
         if (event.transcript?.trim()) {
           this.lastUserTranscript = event.transcript.trim();
           this.callbacks.transcript("you", this.lastUserTranscript);
@@ -150,7 +163,9 @@ export class LiveVoiceSession {
     for (const call of calls) {
       let result;
       try {
-        const { result: data, proposesAction } = await api.runTool(call.name, JSON.parse(call.arguments || "{}"), call.call_id);
+        // The server checks confirmations against the user's latest words, so wait for that transcript.
+        if (call.name === "confirm_action") await this.transcriptsSettled();
+        const { result: data, proposesAction } = await api.runTool(call.name, JSON.parse(call.arguments || "{}"), call.call_id, this.lastUserTranscript);
         if (proposesAction) this.callbacks.actionProposed?.();
         result = data;
       } catch (error) {

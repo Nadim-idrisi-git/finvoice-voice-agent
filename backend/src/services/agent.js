@@ -12,8 +12,15 @@ const MAX_TOOL_ROUNDS = 4;
  * tool results. One corrective retry is allowed; otherwise the agent abstains.
  * Returns { answer, actionProposals, toolsUsed, validation, responseId }.
  */
-export async function runAgent({ message, ctx, openai, model, previousResponseId, evidenceCarryover = [], log }) {
-  const base = { model, instructions: textInstructions(ctx.user), tools: toolDefinitions };
+export async function runAgent({ message, ctx, openai, model, reasoningEffort, previousResponseId, evidenceCarryover = [], log }) {
+  const base = {
+    model,
+    instructions: textInstructions(ctx.user),
+    tools: toolDefinitions,
+    // Same static prefix (instructions + tools) per user → better prompt-cache reuse, lower latency.
+    prompt_cache_key: `finvoice-${ctx.user.id}`,
+    ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
+  };
   const actionProposals = [];
   const toolsUsed = [];
   // Evidence from the previous turn lets follow-ups ("and how much was that?") cite earlier tool results.

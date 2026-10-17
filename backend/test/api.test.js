@@ -138,3 +138,16 @@ describe("voice answer validation", () => {
     assert.deepEqual(bad.body.unsupportedAmounts, ["₹9,999"]);
   });
 });
+
+describe("voice confirmation guard", () => {
+  it("rejects confirm_action from voice unless the user's last words say yes", async () => {
+    const api = await startApp();
+    const draft = await api.request("/api/v1/tools/create_reminder", { body: { args: { title: "Pay rent", details: "Before the 1st" } } });
+    const id = draft.body.result.id;
+    const refused = await api.request("/api/v1/tools/confirm_action", { body: { args: { action_id: id }, userTranscript: "Pehle details batao" } });
+    const accepted = await api.request("/api/v1/tools/confirm_action", { body: { args: { action_id: id }, userTranscript: "Haan, confirm karo" } });
+    await api.close();
+    assert.equal(refused.status, 409);
+    assert.equal(accepted.body.result.status, "SUCCEEDED");
+  });
+});

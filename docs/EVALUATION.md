@@ -43,6 +43,15 @@ These reduce and detect errors; they do not guarantee correctness.
 
 Two lessons: answers vary between runs, so run the suite several times before a release and treat any critical failure as blocking; and grading regexes need refusal-aware patterns. Three of the four fixes were to the tests, made after reading answers that were correct; one was a real defect found by the suite.
 
+## Speed experiment (2026-10-17)
+
+| Text agent setting | Passed | p50 / p95 | Validator corrections |
+| --- | --- | --- | --- |
+| Default reasoning effort + `prompt_cache_key` | 31/31, critical 17/17 | 4.8 s / 7.8 s | 0 |
+| `OPENAI_REASONING_EFFORT=none` | 31/31, critical 17/17 | 4.2 s / 8.1 s | 3 |
+
+Decision: keep the default. `none` saved ~0.6 s at p50 and nothing at p95, while tripling unsupported first drafts (caught by the validator, but each correction is a risk and an extra round trip). Live voice uses the Realtime model and is not affected by this setting.
+
 ## Not yet measured
 
 Speech-recognition accuracy, first-audio latency, interruption latency, and voice-path grounding with real audio (needs live calls); retrieval metrics (Recall@K, NDCG) because there is no document retrieval yet; expert review of the cases (they were written and checked by hand against `profile.json`, not by a domain reviewer).

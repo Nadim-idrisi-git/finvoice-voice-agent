@@ -41,6 +41,7 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
           ctx: { user, store, actions, userMessage: value.message },
           openai,
           model: config.OPENAI_MODEL,
+          reasoningEffort: config.OPENAI_REASONING_EFFORT,
           previousResponseId: lastResponse.get(user.id),
           evidenceCarryover: lastEvidence.get(user.id) ?? [],
           log,
@@ -73,7 +74,9 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
     const callId = typeof req.body?.callId === "string" ? req.body.callId.slice(0, 100) : null;
     const key = callId && `${res.locals.user.id}:${callId}`;
     if (key && toolCallResults.has(key)) return res.json({ ...toolCallResults.get(key), replayed: true });
-    const result = await executeTool(req.params.name, req.body?.args, { user: res.locals.user, store, actions });
+    // The user's latest words (voice transcript) let confirm_action require an explicit yes, as in text chat.
+    const userMessage = typeof req.body?.userTranscript === "string" ? req.body.userTranscript.slice(0, 1000) : "";
+    const result = await executeTool(req.params.name, req.body?.args, { user: res.locals.user, store, actions, userMessage });
     remember(res.locals.user.id, result.result);
     if (key) {
       toolCallResults.set(key, result);

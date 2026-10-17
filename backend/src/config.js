@@ -37,6 +37,8 @@ export function loadConfig(env = process.env) {
     MONGODB_URI: text(env, "MONGODB_URI", undefined),
     OPENAI_API_KEY: text(env, "OPENAI_API_KEY", undefined),
     OPENAI_MODEL: text(env, "OPENAI_MODEL", "gpt-6-luna"),
+    // Empty = the model's default. Lower effort is faster; change only after npm run eval.
+    OPENAI_REASONING_EFFORT: text(env, "OPENAI_REASONING_EFFORT", undefined),
     OPENAI_REALTIME_MODEL: text(env, "OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
     OPENAI_VOICE: text(env, "OPENAI_VOICE", "marin"),
     OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),
