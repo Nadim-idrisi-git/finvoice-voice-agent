@@ -124,6 +124,48 @@ const tools = [
     }),
   },
   {
+    name: "get_insurance",
+    description:
+      "The user's insurance policies (status, premium, cycle, cancellation reason) and premium payments, from the insurance records. Use for any insurance or cover question.",
+    run: facts(({ insurance }) => insurance ?? { policies: [], payments: [], note: "No insurance records loaded." }),
+  },
+  {
+    name: "get_investments",
+    description:
+      "The user's mutual fund holdings (invested, current value, gain or loss, NAV date), SIP plans (amount, frequency, status), and order totals, from the investment records.",
+    run: facts(({ investments }) => investments ?? { holdings: [], sips: [], note: "No investment records loaded." }),
+  },
+  {
+    name: "get_loan_applications",
+    description: "The user's loan applications on the platform: lender, status, reason, and dates. Not a credit score.",
+    run: facts(({ loans }) => ({ applications: loans ?? [] })),
+  },
+  {
+    name: "search_emails",
+    description:
+      "Keyword search over the user's emails (subjects and the start of each body), newest first among the best matches. Use for statements, confirmations, invoices, policy or fund emails. Returns up to 5 matches with emailId as evidence.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string", description: "Keywords, e.g. 'Motilal Oswal purchase', 'HDFC statement', 'LIC premium'." } },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    parseArgs: textArg("query", 80),
+    run: facts(({ emails = [] }, { query }) => {
+      const terms = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 1);
+      const scored = emails
+        .map((e) => {
+          const subject = e.subject.toLowerCase();
+          const body = e.snippet.toLowerCase();
+          const score = terms.reduce((s, t) => s + (subject.includes(t) ? 3 : 0) + (body.includes(t) ? 1 : 0), 0);
+          return { ...e, score };
+        })
+        .filter((e) => e.score > 0)
+        .sort((a, b) => b.score - a.score || b.date.localeCompare(a.date));
+      return { query, totalMatches: scored.length, results: scored.slice(0, 5).map(({ score: _s, ...e }) => e) };
+    }),
+  },
+  {
     name: "draft_charge_reversal_request",
     description:
       "Draft a reversal request to the bank for duplicate charges found in the data. Creates a proposal the user must confirm. Read the key details to the user, then ask for a clear yes.",

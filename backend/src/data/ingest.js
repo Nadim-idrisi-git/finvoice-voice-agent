@@ -7,7 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DATASET_DIR = (process.env.DATASET_DIR ?? path.join(os.homedir(), "Downloads/buildathon")).replace(/^~/, os.homedir());
+const LOCAL_DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data/raw");
+const DATASET_DIR = (process.env.DATASET_DIR ?? (fs.existsSync(LOCAL_DATA) ? LOCAL_DATA : path.join(os.homedir(), "Downloads/buildathon"))).replace(/^~/, os.homedir());
 const USER_ID = process.env.DEMO_USER_ID ?? "1748108541385190";
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data/profile.json");
 
@@ -170,6 +171,105 @@ const nextDay = (at) => new Date(new Date(`${at.slice(0, 10)}T00:00:00Z`).getTim
 const bankName = (code) =>
   ({ HDFCBK: "HDFC Bank", HDFCBN: "HDFC Bank", PNBSMS: "Punjab National Bank", IDFCFB: "IDFC FIRST Bank" })[code] ?? code;
 
+const rupeesToPaise = (v) => (v === "" || v == null ? null : Math.round(Number(v) * 100));
+const userRows = async (file) => {
+  const rows = [];
+  await readCsv(path.join(DATASET_DIR, file), (r) => r.user_id === USER_ID && rows.push(r));
+  return rows;
+};
+
+/** Structured records for the user: insurance, investments, loans, and a searchable email index. */
+async function readRecords() {
+  const fundNames = {};
+  await readCsv(path.join(DATASET_DIR, "investment/funds.csv"), (r) => (fundNames[r.fund_id] = r.fund_name ?? r.name ?? r.scheme_name ?? r.fund_id));
+  const [policies, premiumTx, holdings, sips, orders, loans] = await Promise.all([
+    userRows("insurance/policies.csv"),
+    userRows("insurance/transactions.csv"),
+    userRows("investment/holdings.csv"),
+    userRows("investment/sip_plans.csv"),
+    userRows("investment/orders.csv"),
+    userRows("loan/loan_applications.csv"),
+  ]);
+  const successfulOrders = orders.filter((o) => o.status === "SUCCESS");
+
+  const emails = [];
+  const seen = new Set();
+  await readCsv(path.join(DATASET_DIR, "emails/emails.csv"), (r) => {
+    if (r.user_id !== USER_ID) return;
+    const subject = r.subject.replace(/^(re|fwd?):\s*/i, "").trim();
+    const date = r.received_at.slice(0, 10);
+    const key = `${date}|${subject}`;
+    if (seen.has(key) || /^Delivery Status Notification/i.test(subject)) return; // forwarded copies and bounces
+    seen.add(key);
+    const snippet = r.body.replace(/https?:\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 300);
+    emails.push({ emailId: `email-${emails.length + 1}`, date, subject: subject.slice(0, 140), snippet });
+  });
+
+  return {
+    insurance: {
+      policies: policies.map((p) => ({
+        policyId: p.policy_id,
+        status: p.status,
+        premiumPaise: rupeesToPaise(p.cycle_premium),
+        cycleStart: p.current_cycle_start,
+        cycleEnd: p.current_cycle_end,
+        createdAt: p.created_at,
+        cancelledAt: p.cancelled_at || null,
+        cancellationReason: p.cancellation_reason || null,
+        source: "insurance/policies.csv",
+      })),
+      payments: premiumTx.map((t) => ({
+        transactionId: t.transaction_id,
+        purpose: t.purpose,
+        amountPaise: rupeesToPaise(t.amount_requested),
+        status: t.status,
+        at: t.resolved_at || t.created_at,
+        source: "insurance/transactions.csv",
+      })),
+    },
+    investments: {
+      holdings: holdings.map((h) => ({
+        product: h.product,
+        fund: fundNames[h.fund_id] ?? h.fund_id,
+        folio: h.folio_number,
+        units: Number(h.units),
+        investedPaise: rupeesToPaise(h.invested_amount_inr),
+        currentValuePaise: rupeesToPaise(h.current_value_inr),
+        gainPaise: rupeesToPaise(h.current_value_inr) - rupeesToPaise(h.invested_amount_inr),
+        navPaise: rupeesToPaise(h.latest_nav_inr),
+        navDate: h.nav_date,
+        source: "investment/holdings.csv",
+      })),
+      sips: sips.map((s) => ({
+        product: s.product,
+        fund: fundNames[s.fund_id] ?? s.fund_id,
+        frequency: s.frequency,
+        amountPaise: rupeesToPaise(s.amount_inr),
+        status: s.status,
+        startedOn: (s.first_debit_date || s.activated_at || s.created_at || "").slice(0, 10),
+        cancelledOn: (s.cancelled_at || "").slice(0, 10) || null,
+        source: "investment/sip_plans.csv",
+      })),
+      orderCount: orders.length,
+      successfulOrders: successfulOrders.length,
+      successfulOrderTotalPaise: successfulOrders.reduce((sum, o) => sum + rupeesToPaise(o.amount_inr), 0),
+      lastOrderOn: successfulOrders.map((o) => o.traded_on || o.created_at.slice(0, 10)).sort().at(-1) ?? null,
+    },
+    loans: loans.map((l) => ({
+      applicationId: l.application_id,
+      lender: l.lender,
+      status: l.loan_status,
+      reason: l.end_reason || null,
+      appliedOn: (l.applied_at || "").slice(0, 10),
+      endedOn: (l.ended_at || "").slice(0, 10) || null,
+      requestedPaise: rupeesToPaise(l.requested_amount),
+      interestRatePct: l.interest_rate_yearly_pct ? Number(l.interest_rate_yearly_pct) : null,
+      source: "loan/loan_applications.csv",
+    })),
+    emails,
+  };
+}
+
 async function main() {
   const user = {};
   await readCsv(path.join(DATASET_DIR, "emails/users_data.csv"), (r) => {
@@ -196,6 +296,7 @@ async function main() {
     }
   });
   facts.sort((a, b) => a.at.localeCompare(b.at));
+  const records = await readRecords();
   const profile = {
     source: "Voice AI Buildathon mock dataset (synthetic). Facts parsed from transactional SMS; each keeps its sms_id.",
     generatedAt: new Date().toISOString(),
@@ -203,12 +304,14 @@ async function main() {
     asOf: facts.at(-1)?.at.slice(0, 10) ?? null,
     smsScanned: scanned,
     quality: { ...quality, rejected: quality.rejected.slice(0, 20), rejectedCount: quality.rejected.length },
+    ...records,
     facts,
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(profile, null, 1));
   const byType = facts.reduce((acc, f) => ({ ...acc, [f.type]: (acc[f.type] ?? 0) + 1 }), {});
   console.log(`${profile.user.name}: scanned ${scanned} SMS → ${facts.length} facts`, byType, `→ ${OUT}`);
+  console.log("Records:", { insurancePolicies: records.insurance.policies.length, premiumPayments: records.insurance.payments.length, holdings: records.investments.holdings.length, sips: records.investments.sips.length, orders: records.investments.orderCount, loanApplications: records.loans.length, emails: records.emails.length });
   console.log("Data quality:", { duplicateSmsIds: quality.duplicateSmsIds, transactional: quality.transactional, rejected: quality.rejected.length, unparsedBankMoneySms: quality.unparsedMoneySms });
   for (const s of quality.unparsedSamples.slice(0, 8)) console.log("  unparsed:", s.smsId, s.text);
 }

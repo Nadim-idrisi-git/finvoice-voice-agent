@@ -7,3 +7,4 @@ coverage/
 .DS_Store
 *.log
 **/eval/results/
+backend/data/raw/

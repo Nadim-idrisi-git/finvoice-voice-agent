@@ -1,7 +1,8 @@
 // Pure money and calendar helpers shared by the API and the web client.
 // Kept free of dependencies so the browser bundle can import it cheaply.
 
-export const formatRupees = (paise) => `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+export const formatRupees = (paise) =>
+  `${paise < 0 ? "-" : ""}₹${(Math.abs(paise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 /** "YYYY-MM" for the UTC month containing `date`. */
 export function currentMonth(date = new Date()) {

@@ -22,9 +22,10 @@ export function supportedAmounts(results) {
   const visit = (value, key = "") => {
     if (Array.isArray(value)) {
       const paiseList = /Paise$/.test(key);
-      for (const item of value) paiseList && typeof item === "number" ? allowed.add(item) : visit(item);
+      for (const item of value) paiseList && typeof item === "number" ? allowed.add(Math.abs(item)) : visit(item);
     } else if (value && typeof value === "object") for (const [k, v] of Object.entries(value)) visit(v, k);
-    else if (typeof value === "number" && /Paise$/.test(key)) allowed.add(value);
+    // Spoken amounts carry no sign ("a loss of ₹30.11"), so compare magnitudes.
+    else if (typeof value === "number" && /Paise$/.test(key)) allowed.add(Math.abs(value));
     else if (typeof value === "string") for (const a of moneyAmounts(value)) allowed.add(a.paise);
   };
   visit(results);
@@ -36,7 +37,14 @@ const NOT_FOUND_CLAIM = /couldn.?t find|could not find|can.?t find|no (matching 
 
 // Negated statements ("has not been sent", "nahi bheja") are not success claims.
 const NEGATED = /\b(?:not|never|hasn.?t|haven.?t|isn.?t|wasn.?t|won.?t|nahi|nahin|nahi hua)\b[^.!?]{0,30}?\b(?:done|completed|submitted|sent|ho gaya|kar diya|bhej(?:a|diya))\b[^.!?]*/gi;
-const SUCCESS_CLAIM = /\b(done|completed|submitted|sent to the bank|has been sent|ho gaya|ho gayi|confirm ho (?:gaya|chuka)|kar diya|bhej diya)\b/i;
+// A success claim is about the assistant's own action (draft, request, reminder...), not events in the records
+// ("loan reject ho gaya" is a fact from the data, not a claim that the assistant did something).
+const ACTION_WORDS = String.raw`(?:draft|request|reminder|alert|action|proposal|reversal|dispute|actions tab)`;
+const DONE_WORDS = String.raw`(?:done|completed|submitted|sent|saved|confirmed|confirm ho (?:gaya|gayi|chuka|chuki)|ho gaya|ho gayi|ho chuka|ho chuki|kar diya|kar di|bhej diya)`;
+const SUCCESS_CLAIM = new RegExp(
+  String.raw`\b${ACTION_WORDS}\b[^.!?\n]{0,60}?\b${DONE_WORDS}\b|\b(?:done|ho gaya)\b[^.!?\n]{0,80}?\b${ACTION_WORDS}\b|\b(?:main(?:ne)?|maine|i(?:'ve| have)?)\b[^.!?\n]{0,30}?\b${DONE_WORDS}\b`,
+  "i",
+);
 
 /**
  * Checks a drafted answer against the evidence of this turn.

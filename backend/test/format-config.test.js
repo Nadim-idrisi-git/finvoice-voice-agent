@@ -8,6 +8,7 @@ describe("formatting", () => {
   it("formats paise as Indian rupees", () => {
     assert.equal(formatRupees(235000), "₹2,350");
     assert.equal(formatRupees(6924787), "₹69,247.87");
+    assert.equal(formatRupees(-3011), "-₹30.11");
   });
   it("handles month arithmetic and validation", () => {
     assert.equal(previousMonth("2026-01"), "2025-12");

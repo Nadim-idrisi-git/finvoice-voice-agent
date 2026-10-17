@@ -33,6 +33,15 @@ describe("answer validator", () => {
     assert.equal(validateAnswer({ answer, toolResults: [], toolsCalled: 0 }).uncheckedNotFound, true);
     assert.equal(validateAnswer({ answer, toolResults: [], toolsCalled: 1 }).ok, true);
   });
+  it("accepts a loss stated without its sign", () => {
+    assert.equal(validateAnswer({ answer: "Your fund is down ₹30.11.", toolResults: [{ gainPaise: -3011, gainRupees: "-₹30.11" }] }).ok, true);
+  });
+  it("does not treat events in the records as the assistant's success claims", () => {
+    for (const answer of ["Tejora Finance wala bhi same day reject ho gaya.", "Your SIP was cancelled and the payment completed on 3 June."])
+      assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, false, answer);
+    for (const answer of ["Ho gaya! Draft confirm ho chuka hai.", "Done—your reversal request is saved in the Actions tab.", "Maine request bhej diya."])
+      assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, true, answer);
+  });
   it("flags success claims when nothing was confirmed", () => {
     assert.equal(validateAnswer({ answer: "Done, the request is submitted.", toolResults: [], hasSucceededAction: false }).unsupportedSuccess, true);
     assert.equal(validateAnswer({ answer: "Done, it is in Actions.", toolResults: [], hasSucceededAction: true }).ok, true);

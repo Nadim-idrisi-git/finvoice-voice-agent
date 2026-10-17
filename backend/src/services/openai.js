@@ -1,7 +1,7 @@
 import { HttpError } from "../http.js";
 
 const BASE_URL = "https://api.openai.com/v1";
-const TIMEOUT_MS = 20_000;
+const TIMEOUT_MS = 30_000;
 
 /**
  * Minimal OpenAI REST client built on fetch. The API key stays on the server.
