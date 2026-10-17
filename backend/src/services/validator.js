@@ -52,12 +52,21 @@ const SUCCESS_CLAIM = new RegExp(
  * - success: claims that something was done require a SUCCEEDED action.
  * Returns { ok, unsupportedAmounts, unsupportedSuccess }.
  */
-export function validateAnswer({ answer, toolResults, userMessage, hasSucceededAction, toolsCalled }) {
+// "Draft ready / draft ho gaya" reports a proposal, not a completed action.
+const DRAFT_CLAIM = /\b(?:request |claim |reversal )?draft\b[^.!?\n]{0,25}?\b(?:ho gaya|ho gayi|ready|ban gaya|ban gayi|taiyaar|kar diya|kar di|bana diya|created|prepared)\b|\b(?:drafted|draft kar (?:diya|di|liya))\b/gi;
+
+export function validateAnswer({ answer, toolResults, userMessage, hasSucceededAction, hasProposedAction, toolsCalled }) {
   const allowed = supportedAmounts(toolResults);
   for (const a of moneyAmounts(userMessage ?? "")) allowed.add(a.paise);
   // Exact match only: no unsupported rounding (₹119.67 must not become ₹120).
   const unsupportedAmounts = moneyAmounts(answer).filter((a) => !allowed.has(a.paise));
-  const unsupportedSuccess = SUCCESS_CLAIM.test(String(answer).replace(NEGATED, "")) && !hasSucceededAction;
+  const withoutNegations = String(answer).replace(NEGATED, "");
+  const claimsDraft = DRAFT_CLAIM.test(withoutNegations);
+  DRAFT_CLAIM.lastIndex = 0;
+  // Draft statements are fine when a proposal exists; strip them before checking for completion claims.
+  const remaining = hasProposedAction || hasSucceededAction ? withoutNegations.replace(DRAFT_CLAIM, "") : withoutNegations;
+  const unsupportedSuccess =
+    (SUCCESS_CLAIM.test(remaining) && !hasSucceededAction) || (claimsDraft && !hasProposedAction && !hasSucceededAction);
   // toolsCalled is undefined when the caller cannot know (voice); only enforce when known.
   const uncheckedNotFound = toolsCalled === 0 && NOT_FOUND_CLAIM.test(answer);
   return {

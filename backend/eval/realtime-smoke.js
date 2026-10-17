@@ -65,6 +65,7 @@ ws.onmessage = async ({ data }) => {
       toolResults,
       userMessage: lastUser,
       hasSucceededAction: (await ctx.actions.list(ctx.user.id)).some((a) => a.status === "SUCCEEDED"),
+      hasProposedAction: (await ctx.actions.list(ctx.user.id)).some((a) => a.status === "AWAITING_CONFIRMATION"),
     });
     console.log(`AGENT: ${text}\n   [validator] ${check.ok ? "ok" : JSON.stringify(check)}`);
   }

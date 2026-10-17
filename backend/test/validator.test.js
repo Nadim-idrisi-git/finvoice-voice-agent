@@ -26,7 +26,12 @@ describe("answer validator", () => {
   });
   it("does not treat negated statements as success claims", () => {
     for (const answer of ["There is no proposed action yet, so nothing has been confirmed.", "I have not confirmed anything.", "I've drafted it; it has not been sent to the bank yet.", "Draft ready, abhi bheja nahi gaya hai.", "It hasn't been submitted."])
-      assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, false, answer);
+      // A draft exists in this scenario; the point is that "not sent" is not a completion claim.
+      assert.equal(
+        validateAnswer({ answer, toolResults: [], hasSucceededAction: false, hasProposedAction: true }).unsupportedSuccess,
+        false,
+        answer,
+      );
   });
   it("rejects 'not found' answers when no tool was called, but allows them after a lookup", () => {
     const answer = "I couldn't find a matching IDFC transaction in your records.";
@@ -41,6 +46,12 @@ describe("answer validator", () => {
       assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, false, answer);
     for (const answer of ["Ho gaya! Draft confirm ho chuka hai.", "Done—your reversal request is saved in the Actions tab.", "Maine request bhej diya."])
       assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, true, answer);
+  });
+  it("accepts 'draft ho gaya' when a draft exists, but not without one", () => {
+    const answer = "Request draft ho gaya. Confirm karne ke liye haan boliye.";
+    assert.equal(validateAnswer({ answer, toolResults: [], hasProposedAction: true }).ok, true);
+    assert.equal(validateAnswer({ answer, toolResults: [], hasProposedAction: false }).unsupportedSuccess, true);
+    assert.equal(validateAnswer({ answer: "Draft ready hai, aur maine use confirm kar diya.", toolResults: [], hasProposedAction: true }).unsupportedSuccess, true);
   });
   it("flags success claims when nothing was confirmed", () => {
     assert.equal(validateAnswer({ answer: "Done, the request is submitted.", toolResults: [], hasSucceededAction: false }).unsupportedSuccess, true);

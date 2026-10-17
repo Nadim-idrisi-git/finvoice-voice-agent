@@ -88,9 +88,12 @@ describe("guards", () => {
   it("rate limits voice session requests", async () => {
     const api = await startApp();
     const statuses = [];
-    for (let i = 0; i < 4; i++) statuses.push((await api.request("/api/v1/voice/session", { body: {} })).status);
-    assert.deepEqual(statuses, [503, 503, 503, 429]);
-    await api.close();
+    try {
+      for (let i = 0; i < 7; i++) statuses.push((await api.request("/api/v1/voice/session", { body: {} })).status);
+    } finally {
+      await api.close();
+    }
+    assert.deepEqual(statuses, [503, 503, 503, 503, 503, 503, 429]);
   });
 });
 

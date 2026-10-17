@@ -63,6 +63,7 @@ export async function runAgent({ message, ctx, openai, model, reasoningEffort, p
       toolResults,
       userMessage: message,
       hasSucceededAction: (await ctx.actions.list(ctx.user.id)).some((a) => a.status === "SUCCEEDED"),
+      hasProposedAction: (await ctx.actions.list(ctx.user.id)).some((a) => a.status === "AWAITING_CONFIRMATION"),
       toolsCalled: toolsUsed.length,
     });
 

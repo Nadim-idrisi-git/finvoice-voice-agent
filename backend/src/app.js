@@ -69,7 +69,7 @@ export function createApp({
     res.locals.user = store.user ?? DEMO_USER;
     next();
   });
-  app.use("/api/v1/voice/session", rateLimit({ limit: 3 }));
+  app.use("/api/v1/voice/session", rateLimit({ limit: 6 }));
   app.use("/api/v1/assistant/message", rateLimit({ limit: config.ASSISTANT_RATE_LIMIT }));
   app.use("/api/v1", financeRoutes({ store }));
   app.use("/api/v1", actionRoutes({ actions }));

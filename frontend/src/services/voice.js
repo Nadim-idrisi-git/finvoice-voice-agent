@@ -23,8 +23,9 @@ export class LiveVoiceSession {
   responseActive = false; // OpenAI allows one response at a time per conversation
   responseQueued = false;
 
-  constructor(callbacks) {
+  constructor(callbacks, { voice } = {}) {
     this.callbacks = callbacks;
+    this.voice = voice;
   }
 
   transition(next) {
@@ -34,7 +35,7 @@ export class LiveVoiceSession {
   async start() {
     this.transition("CONNECTING");
     try {
-      const session = await api.voiceSession();
+      const session = await api.voiceSession(this.voice);
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });

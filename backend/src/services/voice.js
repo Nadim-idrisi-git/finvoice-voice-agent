@@ -11,7 +11,12 @@ const TRANSCRIPTION_HINT =
  * instructions, and tools. The browser uses it to open a WebRTC call directly with OpenAI;
  * the long-lived API key never leaves the server.
  */
-export async function createVoiceSession({ config, user, openai }) {
+// Voices the user may pick in the UI (OpenAI Realtime built-in voices).
+export const VOICES = ["marin", "cedar", "coral", "sage", "shimmer", "ash", "verse", "ballad", "alloy", "echo"];
+const SPEECH_SPEED = 0.95; // slightly slower for clearer Hindi on phone speakers
+
+export async function createVoiceSession({ config, user, openai, voice: requested }) {
+  const voice = VOICES.includes(requested) ? requested : config.OPENAI_VOICE;
   if (!openai.configured) {
     throw new HttpError(503, "Live voice is not configured. Add OPENAI_API_KEY on the backend. Text chat remains available.");
   }
@@ -20,7 +25,7 @@ export async function createVoiceSession({ config, user, openai }) {
     session: {
       type: "realtime",
       model: config.OPENAI_REALTIME_MODEL,
-      instructions: voiceInstructions(user, config.OPENAI_VOICE),
+      instructions: voiceInstructions(user, voice),
       tools: toolDefinitions,
       tool_choice: "auto",
       audio: {
@@ -29,7 +34,7 @@ export async function createVoiceSession({ config, user, openai }) {
           transcription: { model: config.OPENAI_TRANSCRIBE_MODEL, prompt: TRANSCRIPTION_HINT },
           turn_detection: { type: "semantic_vad" },
         },
-        output: { voice: config.OPENAI_VOICE },
+        output: { voice, speed: SPEECH_SPEED },
       },
     },
   });
@@ -38,7 +43,7 @@ export async function createVoiceSession({ config, user, openai }) {
     clientSecret: secret.value,
     expiresAt: secret.expires_at,
     model: config.OPENAI_REALTIME_MODEL,
-    voice: config.OPENAI_VOICE,
+    voice,
     callsUrl: "https://api.openai.com/v1/realtime/calls",
   };
 }

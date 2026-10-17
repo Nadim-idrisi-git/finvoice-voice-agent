@@ -16,6 +16,19 @@ export function useAssistant({ onActionProposed }) {
   const [voiceState, setVoiceState] = useState("IDLE");
   const [voiceError, setVoiceError] = useState("");
   const [session, setSession] = useState(null);
+  const [voice, setVoiceChoice] = useState(() => {
+    try {
+      return localStorage.getItem("finvoice.voice") || "marin";
+    } catch {
+      return "marin";
+    }
+  });
+  function setVoice(next) {
+    setVoiceChoice(next);
+    try {
+      localStorage.setItem("finvoice.voice", next);
+    } catch {}
+  }
   // Ref so the unmount cleanup sees the live session, not the initial null.
   const sessionRef = useRef(null);
 
@@ -58,7 +71,7 @@ export function useAssistant({ onActionProposed }) {
         if (live.machine.state === "ERROR") setLiveSession(null);
       },
       actionProposed: () => onActionProposed("The assistant prepared an action. Review and confirm it in Actions."),
-    });
+    }, { voice });
     setLiveSession(live);
     await live.start();
   }
@@ -68,5 +81,5 @@ export function useAssistant({ onActionProposed }) {
     setLiveSession(null);
   }
 
-  return { messages, input, setInput, sendText, sending, voiceState, voiceError, session, startVoice, stopVoice };
+  return { messages, input, setInput, sendText, sending, voice, setVoice, voiceState, voiceError, session, startVoice, stopVoice };
 }

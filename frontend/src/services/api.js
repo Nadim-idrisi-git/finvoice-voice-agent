@@ -12,7 +12,7 @@ const api = {
   dashboard: () => request("/dashboard"),
   analyticsMonth: (month) => request(`/analytics/month?month=${encodeURIComponent(month)}`),
   message: (message) => request("/assistant/message", { method: "POST", body: JSON.stringify({ message }) }),
-  voiceSession: () => request("/voice/session", { method: "POST", body: "{}" }),
+  voiceSession: (voice) => request("/voice/session", { method: "POST", body: JSON.stringify({ voice }) }),
   runTool: (name, args, callId, userTranscript) =>
     request(`/tools/${encodeURIComponent(name)}`, {
       method: "POST",

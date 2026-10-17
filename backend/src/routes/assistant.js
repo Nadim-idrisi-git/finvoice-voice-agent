@@ -95,13 +95,15 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
       toolResults: recentResults.get(res.locals.user.id) ?? [],
       userMessage,
       hasSucceededAction: (await actions.list(res.locals.user.id)).some((a) => a.status === "SUCCEEDED"),
+      hasProposedAction: (await actions.list(res.locals.user.id)).some((a) => a.status === "AWAITING_CONFIRMATION"),
     });
     if (!result.ok) log.warn({ requestId: req.id, unsupported: result.unsupportedAmounts.map((a) => a.text) }, "Voice answer failed validation");
     res.json({ ok: result.ok, unsupportedAmounts: result.unsupportedAmounts.map((a) => a.text), unsupportedSuccess: result.unsupportedSuccess });
   });
 
-  router.post("/voice/session", async (_req, res) => {
-    res.json(await createVoiceSession({ config, user: res.locals.user, openai }));
+  router.post("/voice/session", async (req, res) => {
+    const voice = typeof req.body?.voice === "string" ? req.body.voice.toLowerCase() : undefined;
+    res.json(await createVoiceSession({ config, user: res.locals.user, openai, voice }));
   });
 
   return router;

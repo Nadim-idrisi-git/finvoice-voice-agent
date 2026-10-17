@@ -2,6 +2,15 @@ import { Icon } from "./Icon";
 
 // Voice-first hero: the call is the product, so it leads the page.
 
+const VOICES = [
+  { id: "marin", label: "Marin · female" },
+  { id: "cedar", label: "Cedar · male" },
+  { id: "coral", label: "Coral · female" },
+  { id: "sage", label: "Sage · female" },
+  { id: "ash", label: "Ash · male" },
+  { id: "verse", label: "Verse · male" },
+];
+
 const STATUS = {
   IDLE: { label: "Ready for your weekly money call", hint: "Tap the button and speak in Hinglish, Hindi, or English." },
   CONNECTING: { label: "Connecting…", hint: "Allow the microphone if your browser asks." },
@@ -46,7 +55,7 @@ function Orb({ state, live }) {
 }
 
 export function VoiceHero({ assistant, findings }) {
-  const { voiceState, voiceError, session, startVoice, stopVoice, messages } = assistant;
+  const { voiceState, voiceError, session, startVoice, stopVoice, messages, voice, setVoice } = assistant;
   const live = Boolean(session);
   const status = STATUS[voiceState] ?? STATUS.IDLE;
   const lastAgent = [...messages].reverse().find((m) => m.who === "assistant");
@@ -79,6 +88,22 @@ export function VoiceHero({ assistant, findings }) {
             <Icon name={live ? "X" : "Mic"} size={17} />
             {live ? "End call" : "Start money call"}
           </button>
+          <label className="mt-3 flex items-center gap-2 text-[10px] text-[#6f7f75]">
+            Voice
+            <select
+              value={voice}
+              disabled={live}
+              onChange={(e) => setVoice(e.target.value)}
+              className="rounded-full border border-[#d8e6dc] bg-white px-2.5 py-1 text-[10px] text-[#2f5a43] disabled:opacity-60"
+              aria-label="Choose voice"
+            >
+              {VOICES.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {voiceError && <p className="mt-3 max-w-[420px] text-[10px] text-[#b04c40]">{voiceError}</p>}
 
           {/* Live captions */}
