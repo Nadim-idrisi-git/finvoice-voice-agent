@@ -19,6 +19,8 @@ export class LiveVoiceSession {
   audio = null;
   disposed = false;
   lastUserTranscript = "";
+  responseActive = false; // OpenAI allows one response at a time per conversation
+  responseQueued = false;
 
   constructor(callbacks) {
     this.callbacks = callbacks;
@@ -52,7 +54,7 @@ export class LiveVoiceSession {
       this.channel.onopen = () => {
         this.transition("LISTENING");
         // The agent opens the call ("Sunday money call") instead of waiting for the user.
-        this.send({ type: "response.create" });
+        this.requestResponse();
       };
       this.channel.onmessage = (event) => void this.onEvent(JSON.parse(event.data));
       this.channel.onclose = () => !this.disposed && this.transition("DISCONNECTED");
@@ -75,6 +77,16 @@ export class LiveVoiceSession {
             ? error.message
             : "Could not start voice.",
       );
+    }
+  }
+
+  /** Asks the model to respond now, or right after the current response finishes. */
+  requestResponse() {
+    if (this.responseActive) this.responseQueued = true;
+    else {
+      this.responseQueued = false;
+      this.responseActive = true; // optimistic until response.created/done arrives
+      this.send({ type: "response.create" });
     }
   }
 
@@ -110,10 +122,21 @@ export class LiveVoiceSession {
           void this.validateSpoken(event.transcript.trim());
         }
         break;
+      case "response.created":
+        this.responseActive = true;
+        break;
       case "response.done":
+        this.responseActive = false;
         await this.runToolCalls(event.response?.output ?? []);
+        if (this.responseQueued && !this.responseActive) this.requestResponse();
         break;
       case "error":
+        // A queued request racing an active response is handled by requestResponse; not worth alarming the user.
+        if (event.error?.code === "conversation_already_has_active_response") {
+          this.responseQueued = true;
+          break;
+        }
+        this.responseActive = false; // a failed request must not block later responses
         this.callbacks.error(event.error?.message ?? "The voice provider reported an error.");
         break;
     }
@@ -139,7 +162,7 @@ export class LiveVoiceSession {
         item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result) },
       });
     }
-    this.send({ type: "response.create" });
+    this.requestResponse();
   }
 
   /** Checks a spoken answer against server-side tool results; asks the model to correct unsupported amounts. */
@@ -160,7 +183,7 @@ export class LiveVoiceSession {
           content: [{ type: "input_text", text: `Validation failed: ${problems.join("; ")}. Briefly correct yourself using only tool values, or say you can't verify it.` }],
         },
       });
-      this.send({ type: "response.create" });
+      this.requestResponse();
     } catch {
       // Validation is best-effort for voice; the text path validates before answering.
     }
