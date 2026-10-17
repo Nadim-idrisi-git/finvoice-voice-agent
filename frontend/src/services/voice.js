@@ -99,6 +99,11 @@ export class LiveVoiceSession {
     }
   }
 
+  /** Mutes or unmutes the microphone without ending the call; the assistant can keep speaking. */
+  setMuted(muted) {
+    this.stream?.getAudioTracks().forEach((track) => (track.enabled = !muted));
+  }
+
   send(event) {
     if (this.channel?.readyState === "open") this.channel.send(JSON.stringify(event));
   }

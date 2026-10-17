@@ -55,9 +55,10 @@ function Orb({ state, live }) {
 }
 
 export function VoiceHero({ assistant, findings }) {
-  const { voiceState, voiceError, session, startVoice, stopVoice, messages, voice, setVoice } = assistant;
+  const { voiceState, voiceError, session, startVoice, stopVoice, messages, voice, setVoice, muted, toggleMute } = assistant;
   const live = Boolean(session);
-  const status = STATUS[voiceState] ?? STATUS.IDLE;
+  const status =
+    live && muted ? { label: "You're muted", hint: "Finvoice can't hear you. Tap Unmute to talk." } : (STATUS[voiceState] ?? STATUS.IDLE);
   const lastAgent = [...messages].reverse().find((m) => m.who === "assistant");
   const lastUser = [...messages].reverse().find((m) => m.who === "you");
 
@@ -78,16 +79,31 @@ export function VoiceHero({ assistant, findings }) {
             {status.label}
           </h2>
           <p className="mt-1 text-[11px] text-[#6f7f75]">{status.hint}</p>
-          <button
-            onClick={() => (live ? void stopVoice() : void startVoice())}
-            aria-label={live ? "End voice call" : "Start voice session"}
-            className={`mt-5 flex items-center gap-2 rounded-full px-6 py-3 text-[13px] font-bold shadow-[0_10px_24px_-10px_#1f6b47aa] transition hover:scale-[1.02] ${
-              live ? "bg-[#b24c43] text-white hover:bg-[#9c3f37]" : "bg-[#24744c] text-white hover:bg-[#1d623f]"
-            }`}
-          >
-            <Icon name={live ? "X" : "Mic"} size={17} />
-            {live ? "End call" : "Start money call"}
-          </button>
+          <div className="mt-5 flex items-center gap-2.5">
+            <button
+              onClick={() => (live ? void stopVoice() : void startVoice())}
+              aria-label={live ? "End voice call" : "Start voice session"}
+              className={`flex items-center gap-2 rounded-full px-6 py-3 text-[13px] font-bold shadow-[0_10px_24px_-10px_#1f6b47aa] transition hover:scale-[1.02] ${
+                live ? "bg-[#b24c43] text-white hover:bg-[#9c3f37]" : "bg-[#24744c] text-white hover:bg-[#1d623f]"
+              }`}
+            >
+              <Icon name={live ? "X" : "Mic"} size={17} />
+              {live ? "End call" : "Start money call"}
+            </button>
+            {live && (
+              <button
+                onClick={toggleMute}
+                aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+                aria-pressed={muted}
+                className={`flex items-center gap-2 rounded-full border px-5 py-3 text-[13px] font-bold transition hover:scale-[1.02] ${
+                  muted ? "border-[#e0b3ad] bg-[#fdeeee] text-[#9a463a]" : "border-[#cfe0d5] bg-white text-[#2f5a43]"
+                }`}
+              >
+                <Icon name={muted ? "MicOff" : "Mic"} size={17} />
+                {muted ? "Unmute" : "Mute"}
+              </button>
+            )}
+          </div>
           <label className="mt-3 flex items-center gap-2 text-[10px] text-[#6f7f75]">
             Voice
             <select

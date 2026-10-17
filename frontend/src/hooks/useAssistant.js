@@ -16,6 +16,7 @@ export function useAssistant({ onActionProposed }) {
   const [voiceState, setVoiceState] = useState("IDLE");
   const [voiceError, setVoiceError] = useState("");
   const [session, setSession] = useState(null);
+  const [muted, setMutedState] = useState(false);
   const [voice, setVoiceChoice] = useState(() => {
     try {
       return localStorage.getItem("finvoice.voice") || "marin";
@@ -40,6 +41,13 @@ export function useAssistant({ onActionProposed }) {
   function setLiveSession(live) {
     sessionRef.current = live;
     setSession(live);
+    setMutedState(false); // every new or ended call starts unmuted
+  }
+
+  function toggleMute() {
+    const next = !muted;
+    sessionRef.current?.setMuted(next);
+    setMutedState(next);
   }
 
   async function sendText(e) {
@@ -81,5 +89,5 @@ export function useAssistant({ onActionProposed }) {
     setLiveSession(null);
   }
 
-  return { messages, input, setInput, sendText, sending, voice, setVoice, voiceState, voiceError, session, startVoice, stopVoice };
+  return { messages, input, setInput, sendText, sending, voice, setVoice, muted, toggleMute, voiceState, voiceError, session, startVoice, stopVoice };
 }
