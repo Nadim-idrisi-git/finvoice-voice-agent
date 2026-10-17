@@ -6,7 +6,7 @@ Give one local demo user a responsive, voice-first way to ask about synthetic IN
 
 ## Users and workflows
 
-- Ask questions in English, Hindi, or Hinglish by text; optional Gemini Live voice when credentials are configured.
+- Ask questions in English, Hindi, or Hinglish by text; an OpenAI agent answers using tools over the records, with a rule-based fallback; optional OpenAI Realtime live voice when a key is configured.
 - Review monthly totals, categories, recurring-payment candidates, upcoming bills, EMI dates, and unusual-spend candidates.
 - Propose and confirm reminders or spending alerts; inspect the resulting action history.
 - Switch to text when voice is unavailable.
@@ -17,4 +17,4 @@ All current records are clearly identified as synthetic. No actual bank connecti
 
 ## MVP acceptance state
 
-Verified locally: frontend/API build, deterministic calculation and API tests, browser text interaction, prior-month analytics, and in-app reminder proposal/confirmation. Pending: authenticated multi-user data access, runtime Mongo persistence, live Gemini key/device integration, Hindi/Hinglish audio quality checks, voice interruption measurements, and deployment verification. See `VOICE_EVALUATION.md` and `DEPLOYMENT.md`.
+Verified locally: frontend build, backend and frontend tests (including the agent tool-calling loop against a fake OpenAI), and rendered UI at desktop, tablet, and phone widths. Pending: authenticated multi-user data access, runtime Mongo persistence, live OpenAI key/device integration, Hindi/Hinglish audio quality checks, voice interruption measurements, and deployment verification. See `VOICE_EVALUATION.md` and `DEPLOYMENT.md`.

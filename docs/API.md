@@ -1,13 +1,29 @@
 # API
 
-Base path: `/api/v1`. `GET /health` is a process health probe reporting database, store, and voice configuration status.
+Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /health` reports database, store, and whether OpenAI is configured.
 
 **Read models** (owner-scoped, synthetic): `GET /session`, `/dashboard`, `/analytics/summary`, `/analytics/categories`, `/analytics/month?month=YYYY-MM`, `/analytics/compare`, `/analytics/merchants`, `/analytics/unusual`, `/subscriptions`, `/bills`, `/emis`, `/audit`, `/reminders`, `/alerts`.
 
-**Actions:** `GET /actions` lists actions. `POST /actions` creates a proposal (`reminder`, `spending_alert`, `report`, `subscription_workflow`). `POST /actions/:id/confirm` with `{ "confirmation": true }` confirms that exact proposal; repeating it is idempotent.
+**Actions:** `GET /actions` lists actions. `POST /actions` with `{ type, title, details }` creates a proposal (`reminder`, `spending_alert`, `report`, `subscription_workflow`; title 3–100 and details 3–500 characters). `POST /actions/:id/confirm` with `{ "confirmation": true }` confirms that exact proposal; repeating it is idempotent.
 
-**Assistant:** `POST /assistant/message` accepts `{ message }` (1–1200 characters) and returns a deterministic, grounded answer; reminder or alert requests also return an `actionProposal`.
+**Assistant:** `POST /assistant/message` with `{ message }` (1–1200 characters) returns:
 
-**Voice:** `POST /voice/session` returns a short-lived provider token plus the `systemInstruction`, `tools`, `model`, `voice`, and `apiVersion` the client must use (503 when no key is configured; rate limited to 3/minute). `POST /tools/:name` with `{ args }` runs one registered voice tool and returns `{ result, proposesAction }`. Unknown tools return 404 and invalid arguments 400. Tool results add a formatted INR string beside every amount (`totalPaise` → `totalRupees`) so the model never converts paise when speaking; action tools only create proposals.
+```json
+{
+  "answer": "Your next bill is Electricity for ₹2,350, due 21 October…",
+  "source": "openai",
+  "actionProposal": null,
+  "actionProposals": [],
+  "toolsUsed": ["get_upcoming_bills"],
+  "synthetic": true,
+  "requestId": "…"
+}
+```
 
-Amounts are integer paise. Requests use Zod validation, a 24 KB body limit, request IDs, a 60/minute rate limit, and a central error handler (`HttpError` messages are returned; other errors return a generic 500). Demo session authorization is local-only and must be replaced before production.
+`source` is `openai` when the agent answered and `rules` for the fallback (which also returns `intent` and `data`). Rate limited to 20/minute.
+
+**Voice:** `POST /voice/session` returns `{ clientSecret, expiresAt, model, voice, callsUrl }` for a browser WebRTC call to OpenAI Realtime (503 without `OPENAI_API_KEY`; 3/minute). `POST /tools/:name` with `{ args }` runs one registered tool and returns `{ result, proposesAction }`; unknown tools return 404 and invalid arguments 400. Results add a formatted INR string beside every amount (`totalPaise` → `totalRupees`). Action tools only create proposals.
+
+Tools: `get_spending_summary`, `get_category_breakdown`, `compare_monthly_spending`, `find_recurring_subscriptions`, `get_upcoming_bills`, `get_emi_schedule`, `get_unusual_spending`, `create_reminder`, `configure_spending_alert`, `prepare_subscription_action`.
+
+All requests have a 24 KB body limit, an `X-Request-Id`, security headers, a 60/minute global rate limit, and a central error handler (`HttpError` messages are returned; anything else is a generic 500). Demo identity is local-only and must be replaced before production. A Postman collection can be built directly from these routes.

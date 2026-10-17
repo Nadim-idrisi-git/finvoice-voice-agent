@@ -1,28 +1,14 @@
 {
-  "name": "voice-financial-agent",
+  "name": "finvoice",
   "private": true,
-  "version": "0.1.0",
-  "workspaces": [
-    "apps/api",
-    "apps/web",
-    "packages/shared"
-  ],
+  "version": "0.2.0",
+  "description": "Voice-first financial assistant (synthetic data): React + Tailwind frontend, Node + Express backend, OpenAI.",
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "npm --workspace apps/api run dev",
-    "dev:web": "npm --workspace apps/web run dev",
-    "build": "npm run build --workspace packages/shared && npm run build --workspace apps/api && npm run build --workspace apps/web",
-    "test": "npm run test --workspace packages/shared && npm run test --workspace apps/api && npm run test --workspace apps/web",
-    "test:e2e": "npm run test:e2e --workspace apps/web",
-    "seed": "npm --workspace apps/api run seed",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "setup": "npm install --prefix backend && npm install --prefix frontend",
+    "dev": "node dev.js",
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "build": "npm run check --prefix backend && npm run build --prefix frontend",
+    "seed": "npm run seed --prefix backend"
   },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "prettier": "^3.5.3"
-  },
-  "overrides": {
-    "qs": "6.16.1"
-  }
+  "type": "module"
 }

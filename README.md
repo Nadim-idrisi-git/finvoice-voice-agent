@@ -1,23 +1,40 @@
-# Voice Financial Agent
+# Finvoice: Voice Financial Agent
 
-A standalone, voice-first financial assistant using synthetic INR records. It provides deterministic analytics, a conversational text fallback, action proposals with confirmation, audit history, and an optional Gemini Live voice adapter. No bank, payment, or subscription provider is connected.
+A voice-first personal finance assistant using synthetic INR records. Ask about spending, subscriptions, bills, and EMIs by text or live voice; propose reminders and alerts that you confirm before anything is recorded. No bank, payment, or subscription provider is connected.
+
+**Stack:** JavaScript (ES6+), React, Tailwind CSS, Node.js, Express, MongoDB, OpenAI API (Responses API agent with tool calling, Realtime API for live voice), deployed on Vercel (frontend) and Render (backend).
+
+## Project structure
+
+```text
+frontend/   React + Tailwind CSS app (Vite build), deployed to Vercel
+backend/    Node.js + Express REST API, OpenAI integration, MongoDB seed, deployed to Render
+docs/       Architecture, API, voice, security, testing, and deployment notes
+```
 
 ## Run locally
 
-Requirements: Node.js 20+, npm, and MongoDB (optional for the seed command; the app reads its in-memory synthetic fixture).
+Requirements: Node.js 20+ and npm. MongoDB is optional (only for `npm run seed`).
 
-1. Copy `.env.example` to `.env`. The defaults work for local development.
-2. Run `npm install` and `npm run dev`. For browser tests, run `npx playwright install chromium` once.
-3. Open http://localhost:5173. The API runs on http://localhost:4100.
-4. Optional: set `GEMINI_API_KEY` to enable Gemini Live. No provider key is needed for text-based synthetic demo interaction.
+1. `npm run setup` installs both apps.
+2. `cp backend/.env.example backend/.env` and, optionally, `cp frontend/.env.example frontend/.env`.
+3. Optional: set `OPENAI_API_KEY` in `backend/.env` to enable the AI agent and live voice.
+4. `npm run dev` starts the backend on <http://localhost:4100> and the frontend on <http://localhost:5173>.
 
-The demo identity is explicitly labeled and contains synthetic records. The API returns an error for all `/api/v1` routes in production because real authentication is not implemented. Live voice requires a Gemini API key and is billed by the provider; no paid resources are provisioned by this project. `GEMINI_VOICE` selects a prebuilt voice on the API server.
+Without an OpenAI key, text chat uses the built-in rule-based assistant and voice is disabled; everything else works. OpenAI usage is billed to your own account; this project provisions no paid resources.
 
-## Workspace
+| Command         | What it does                                            |
+| --------------- | ------------------------------------------------------- |
+| `npm run setup` | Install backend and frontend dependencies               |
+| `npm run dev`   | Run both dev servers                                    |
+| `npm test`      | Run backend and frontend tests (Node's built-in runner) |
+| `npm run build` | Syntax-check the backend and build the frontend         |
+| `npm run seed`  | Write synthetic transactions to MongoDB                 |
 
-- `apps/web`: React + Vite dashboard split into pages, components, and a `useAssistant` hook.
-- `apps/api`: versioned Express API: config, owner-scoped store, action service, voice tool registry, routes, and deterministic analytics.
-- `packages/shared`: shared Zod schemas and money/month formatting helpers.
-- `docs`: architecture, security, evaluation, deployment, API, costs, and decision records.
+## How it works
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md), [VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [DEPLOYMENT.md](docs/DEPLOYMENT.md). All financial records in this MVP are synthetic. See [SECURITY.md](docs/SECURITY.md) for trust boundaries and [TESTING.md](docs/TESTING.md) for checks.
+- **Text chat:** the backend runs an OpenAI agent (Responses API) that calls server-side tools over your records, so every amount comes from deterministic calculations, not the model. If OpenAI is not configured or fails, a rule-based English/Hindi/Hinglish assistant answers.
+- **Live voice:** the backend mints a short-lived OpenAI Realtime key; the browser connects over WebRTC, streams microphone audio, and forwards the model's tool calls to the same backend tools. You can interrupt at any time.
+- **Actions:** the assistant can only _propose_ reminders, alerts, or subscription workflows. Nothing is recorded until you confirm it under Actions.
+
+The demo identity and records are synthetic. All `/api/v1` routes return 503 in production because real authentication is not implemented yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/API.md](docs/API.md), [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

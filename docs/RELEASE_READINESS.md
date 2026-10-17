@@ -2,23 +2,23 @@
 
 ## Local verification
 
-- Unit and API tests: passed (36 tests across shared, API, and web workspaces).
-- JavaScript syntax checks: passed for the API and shared package.
-- Production build: passed for shared, API, and web workspaces.
-- Browser tests: passed (2 flows: Hinglish spending question with confirmed reminder, and previous-month analytics).
-- Dependency audit: passed with 0 reported vulnerabilities at moderate severity or higher.
-- Mongo seed and connection smoke check: passed with 169 synthetic INR transactions.
+- Tests: passed (37 backend, 5 frontend) with Node's built-in test runner. OpenAI is replaced by a fake fetch, so the agent tool loop, fallback, and Realtime session minting are tested without network access.
+- Backend syntax check and frontend production build: passed.
+- Rendered UI checked at 1440px, 900px, and 390px widths.
+- Dependency audit: 0 vulnerabilities in both apps.
+- Not run in this layout: browser end-to-end tests (removed with Playwright), live OpenAI calls, and the Mongo seed.
 
 ## Included
 
 - Responsive finance dashboard, transaction and analytics views, deterministic text assistant, and confirmation-gated demo actions.
-- Optional Gemini Live voice path with short-lived server-issued session token and explicit UI state handling.
-- Synthetic INR data, API schemas, local docs, starter Render/Vercel configuration, and CI workflow.
+- OpenAI text agent with server-side tool calling and a rule-based fallback.
+- Optional OpenAI Realtime voice over WebRTC with a short-lived server-issued key and explicit UI state handling.
+- Synthetic INR data, request validation, local docs, starter Render/Vercel configuration, and CI workflow.
 
 ## Required before real users
 
 - Implement and review real authentication, session/CSRF protections, authorization, and durable owner-scoped repositories. Production API routes currently fail closed with HTTP 503; demo data and actions are in process memory.
-- Configure a Gemini API key and test real browser audio sessions, Hindi/Hinglish quality, interruptions, latency, and supported devices. Live voice was not exercised without credentials.
+- Configure an OpenAI API key and test the agent's answers and real browser audio sessions, Hindi/Hinglish quality, interruptions, latency, and supported devices. Live voice was not exercised without credentials.
 - Complete privacy, retention/deletion, threat, abuse, operational, and financial-domain reviews. Do not connect real bank data in this demo.
 - Deploy and verify environments, CORS, secrets, monitoring, backups, and rollback. No deployment has been performed.
 
