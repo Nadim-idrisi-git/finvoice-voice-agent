@@ -186,6 +186,15 @@ function computeBriefing(profile) {
       },
     });
   }
+  const cover = profile.insurance?.healthCovers?.[0];
+  if (cover && cover.status !== "active")
+    findings.push({
+      priority: 1.5,
+      title: `Your ${inr(cover.sumInsuredPaise)} ${cover.insurer} health cover has been off since ${pretty(String(cover.cancelledAt).slice(0, 10))}`,
+      whyItMatters: `It was cancelled because the UPI AutoPay mandate was cancelled, so a hospital bill today would not be covered by it.${profile.insurance.eligibilityBlocks?.length ? " The records also show an eligibility block on new cover." : ""}`,
+      suggestedAction: "Check claim eligibility for any admission, or ask the insurer about restoring cover.",
+      data: { sumInsuredPaise: cover.sumInsuredPaise, insurer: cover.insurer, cancelledAt: cover.cancelledAt, reason: cover.cancellationReason, listedPremiumPaise: cover.listedPremiumPaise },
+    });
   for (const t of minimumBalanceTraps(facts).slice(0, 1))
     findings.push({
       priority: 3,

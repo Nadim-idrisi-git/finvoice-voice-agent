@@ -192,6 +192,51 @@ async function readRecords() {
   ]);
   const successfulOrders = orders.filter((o) => o.status === "SUCCESS");
 
+  // Health cover details: product, application (cover chosen), price list, blocks, write-offs.
+  const productsById = {};
+  await readCsv(path.join(DATASET_DIR, "insurance/insurance_products.csv"), (r) => (productsById[r.product_id] = r));
+  const [applications, blocks] = await Promise.all([userRows("insurance/applications.csv"), userRows("insurance/insurance_eligibility_blocks.csv")]);
+  const policyIds = new Set(policies.map((p) => p.policy_id));
+  const receivables = [];
+  await readCsv(path.join(DATASET_DIR, "insurance/receivables.csv"), (r) => policyIds.has(r.policy_id) && receivables.push(r));
+  const rateCard = [];
+  await readCsv(path.join(DATASET_DIR, "insurance/premium_rate_cards.csv"), (r) => rateCard.push(r));
+  const insurerName = (code) => ({ care_health: "Care Health", icici_lombard: "ICICI Lombard" })[code] ?? code;
+  const healthCovers = policies.map((p) => {
+    const app = applications.find((a) => a.application_id === p.application_id) ?? {};
+    const product = productsById[p.product_id] ?? {};
+    const age = Number(app.eldest_age);
+    const listed = rateCard.find(
+      (c) =>
+        c.product_id === p.product_id &&
+        c.cover_amount === app.cover_amount &&
+        c.adult_count === app.adult_count &&
+        c.child_count === app.child_count &&
+        age >= Number(c.eldest_age_band_min) &&
+        age <= Number(c.eldest_age_band_max),
+    );
+    return {
+      policyId: p.policy_id,
+      insurer: insurerName(product.insurer_code),
+      productType: product.product_type === "super_topup" ? "Super top-up" : "Base health cover",
+      billing: product.billing_cadence,
+      sumInsuredPaise: rupeesToPaise(app.cover_amount),
+      adultsCovered: Number(app.adult_count || 0),
+      childrenCovered: Number(app.child_count || 0),
+      eldestAge: age || null,
+      city: (app.address || "").split(",").slice(-2).join(",").trim() || null,
+      status: p.status,
+      activeFrom: p.created_at,
+      cancelledAt: p.cancelled_at || null,
+      cancellationReason: p.cancellation_reason || null,
+      premiumOnPolicyPaise: rupeesToPaise(p.cycle_premium),
+      listedPremiumPaise: listed ? rupeesToPaise(listed.premium_amount) : null,
+      listedPremiumPer: product.billing_cadence === "daily" ? "day" : "month",
+      eCardIssued: false,
+      source: "insurance/policies.csv, applications.csv, insurance_products.csv, premium_rate_cards.csv",
+    };
+  });
+
   const emails = [];
   const seen = new Set();
   await readCsv(path.join(DATASET_DIR, "emails/emails.csv"), (r) => {
@@ -205,8 +250,21 @@ async function readRecords() {
     emails.push({ emailId: `email-${emails.length + 1}`, date, subject: subject.slice(0, 140), snippet });
   });
 
+  // Life insurance premiums from payment emails (e.g. LIC "Payment For 25XXX9324 ₹2596 ... Debited from Bank Account : XXXXXX2750").
+  const lifePolicies = new Map();
+  for (const e of emails) {
+    const m = e.snippet.match(/Payment For (\w*X+\w*) ₹\s?([\d,]+(?:\.\d+)?).*?Debited from Bank Account : X*(\d{4})/i);
+    const known = m && lifePolicies.get(m[1]);
+    if (m && /Life Insurance Corporation|LIC/i.test(e.subject) && (!known || e.date > known.paidOn))
+      lifePolicies.set(m[1], { insurer: "LIC", policyRef: m[1], lastPremiumPaise: rupeesToPaise(m[2].replace(/,/g, "")), paidOn: e.date, fromAccount: m[3], evidence: [e.emailId] });
+  }
+
   return {
     insurance: {
+      healthCovers,
+      eligibilityBlocks: blocks.map((b) => ({ reason: b.reason, blockedAt: b.blocked_at, source: "insurance/insurance_eligibility_blocks.csv" })),
+      writtenOff: receivables.map((r) => ({ amountPaise: rupeesToPaise(r.amount), reason: r.reason, status: r.status, source: "insurance/receivables.csv" })),
+      lifePolicies: [...lifePolicies.values()],
       policies: policies.map((p) => ({
         policyId: p.policy_id,
         status: p.status,

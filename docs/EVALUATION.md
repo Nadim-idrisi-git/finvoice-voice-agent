@@ -12,7 +12,7 @@ These reduce and detect errors; they do not guarantee correctness.
 
 ## Suite
 
-31 cases (version `2026-10-17.8`, including Hinglish and Hindi, and insurance, investment, loan, and email questions): briefing (EN, Hinglish, Hindi), balance, ambiguous account, speech-recognition slip, recurring payments, bills, numeric precision, multi-part, missing evidence ×3 (credit score, interest rate, unknown-not-zero), no-promise, unsupported transfer, cross-user access, prompt injection, draft-is-not-yes, draft-then-yes, yes-without-draft, multi-turn follow-up, greeting. Each case states expected tools, prohibited tools, required/forbidden answer patterns, abstention, and resulting action status, plus a severity. Every case also fails if the validator had to abstain.
+35 cases (version `2026-10-17.9`): Hinglish, Hindi, English; money call, insurance companion, investments, loans, emails, security, actions: briefing (EN, Hinglish, Hindi), balance, ambiguous account, speech-recognition slip, recurring payments, bills, numeric precision, multi-part, missing evidence ×3 (credit score, interest rate, unknown-not-zero), no-promise, unsupported transfer, cross-user access, prompt injection, draft-is-not-yes, draft-then-yes, yes-without-draft, multi-turn follow-up, greeting. Each case states expected tools, prohibited tools, required/forbidden answer patterns, abstention, and resulting action status, plus a severity. Every case also fails if the validator had to abstain.
 
 ## Acceptance criteria (this release)
 
@@ -44,6 +44,8 @@ These reduce and detect errors; they do not guarantee correctness.
 Two lessons: answers vary between runs, so run the suite several times before a release and treat any critical failure as blocking; and grading regexes need refusal-aware patterns. Three of the four fixes were to the tests, made after reading answers that were correct; one was a real defect found by the suite.
 
 **Regression after the UI/briefing-text change:** 30/31 (critical 16/17): the validator wrongly blocked a correct refusal ("nothing has been confirmed", "I have not confirmed anything") because negation handling missed "confirmed"/"nothing". Fixed with tests; re-run **31/31, critical 17/17**.
+
+**Suite .9 (Insurance Companion added):** **35/35, critical 19/19** (English 23/23, Hinglish 10/10, Hindi 2/2); validator corrected 1 draft by retry. Latency p50 6.0 s / p95 13.7 s on this run (more tool rounds for claim questions; varies run to run).
 
 ## Speed experiment (2026-10-17)
 

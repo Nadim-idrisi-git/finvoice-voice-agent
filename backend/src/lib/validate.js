@@ -1,6 +1,6 @@
 // Hand-written request validators. Each returns { value } on success or { error } with a client-safe message.
 
-export const ACTION_TYPES = ["reminder", "spending_alert", "report", "subscription_workflow", "dispute_draft"];
+export const ACTION_TYPES = ["reminder", "spending_alert", "report", "subscription_workflow", "dispute_draft", "claim_draft"];
 
 const trimmed = (value) => (typeof value === "string" ? value.trim() : null);
 

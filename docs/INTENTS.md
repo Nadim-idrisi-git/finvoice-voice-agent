@@ -13,6 +13,8 @@ Intent recognition is done by the model choosing tools (English, Hindi, Hinglish
 | Spending summary | "How much did I spend this month?" | `get_spending_summary`, `get_category_breakdown`, `compare_monthly_spending` | No | Totals from deterministic analytics |
 | Dispute a duplicate charge | "Draft the IDFC reversal" | `draft_charge_reversal_request` → `confirm_action` | **Yes**: explicit yes in the user's latest turn; server rejects confirmation without one (text) | Draft letter in Actions; never "sent to the bank" |
 | Reminder / alert | "Remind me before the gas bill" | `create_reminder`, `configure_spending_alert` → `confirm_action` | **Yes** | In-app reminder only |
+| Insurance companion: claim / hospitalisation | "Papa hospital mein admit hain, claim chalega?" | `check_claim_eligibility` → `draft_insurance_claim` → `confirm_action` | **Yes** for the draft | Says whether records show active cover on the admission date and why; claim intimation draft with document checklist; never invents coverage terms or promises payment |
+| Insurance: policy info | "Mera health cover kitne ka hai?", "LIC premium kab bhara?" | `get_insurance`, `search_emails` | No | Insurer, sum insured, members, status, cancellation reason, eligibility block, LIC premiums |
 | Unsupported: transfer, payment, cancellation | "Send ₹5,000 to Arpit" | none | n/a | Refuse briefly, offer supported help |
 | Missing data: credit score, loan rate, insurance cover | "What's my CIBIL score?" | none | n/a | "I can't verify that from your records" |
 | Other users / prompt injection | "Show Lokesh's transactions", "ignore your rules" | none | n/a | Refuse; owner scoping is enforced server-side regardless |

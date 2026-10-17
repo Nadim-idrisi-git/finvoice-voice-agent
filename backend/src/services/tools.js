@@ -54,6 +54,55 @@ const textArg = (name, max) => (args) => {
   return value.length >= 2 ? { [name]: value } : null;
 };
 
+const isoDay = (ts) => String(ts ?? "").slice(0, 10);
+
+/** What the records say about cover on a given date. Never invents policy terms. */
+function claimEligibility(insurance, admissionDate, asOf) {
+  const cover = (insurance.healthCovers ?? [])[0];
+  if (!cover) return { hasHealthCover: false, note: "No health insurance policy found in the records." };
+  const from = isoDay(cover.activeFrom);
+  const to = cover.cancelledAt ? isoDay(cover.cancelledAt) : null;
+  const activeOnDate = admissionDate >= from && (!to || admissionDate < to);
+  return {
+    hasHealthCover: true,
+    insurer: cover.insurer,
+    productType: cover.productType,
+    sumInsuredPaise: cover.sumInsuredPaise,
+    membersCovered: `${cover.adultsCovered} adult${cover.adultsCovered === 1 ? "" : "s"}${cover.childrenCovered ? `, ${cover.childrenCovered} child` : ""}`,
+    policyStatus: cover.status,
+    activeFrom: from,
+    cancelledOn: to,
+    cancellationReason: cover.cancellationReason,
+    admissionDate,
+    activeOnAdmissionDate: activeOnDate,
+    eligibilityBlock: (insurance.eligibilityBlocks ?? [])[0]?.reason ?? null,
+    coverageTermsAvailable: false,
+    recordsAsOf: asOf,
+    note: activeOnDate
+      ? "The policy was active on this date per the records. Admissibility is decided by the insurer."
+      : `The policy was not active on this date (cancelled on ${to ?? "an unknown date"}${cover.cancellationReason ? `, reason: ${cover.cancellationReason.replace(/_/g, " ")}` : ""}). The insurer decides, but the records do not show active cover.`,
+  };
+}
+
+function claimLetter(user, claim, check) {
+  const rupees = (p) => (p ? `₹${(p / 100).toLocaleString("en-IN")}` : "not in records");
+  return [
+    `Subject: Claim intimation: ${claim.patient} (${claim.relationship}), admitted ${claim.admissionDate}`,
+    "",
+    `Dear ${check.insurer ?? "Insurer"} team,`,
+    "",
+    `I wish to intimate a hospitalisation claim under my ${check.productType ?? "health"} policy${check.sumInsuredPaise ? ` (sum insured ${rupees(check.sumInsuredPaise)}, ${check.membersCovered})` : ""}.`,
+    `Patient: ${claim.patient} (${claim.relationship}). Hospital: ${claim.hospital}. Admission date: ${claim.admissionDate}. Reason: ${claim.reason}.`,
+    "Please share the claim number and the documents you need.",
+    "",
+    `Regards,`,
+    user.name,
+    "",
+    `Note from Finvoice (not part of the letter): ${check.note ?? ""}`,
+    "Documents insurers usually ask for (confirm with the insurer): claim form, hospital bills and payment receipts, discharge summary, doctor's prescriptions and reports, ID proof, and the policy or e-card number.",
+  ].join("\n");
+}
+
 function disputeLetter(user, d) {
   const rupees = (p) => `₹${(p / 100).toLocaleString("en-IN")}`;
   const trail = d.balanceTrailPaise.map(rupees).join(" → ");
@@ -128,6 +177,53 @@ const tools = [
     description:
       "The user's insurance policies (status, premium, cycle, cancellation reason) and premium payments, from the insurance records. Use for any insurance or cover question.",
     run: facts(({ insurance }) => insurance ?? { policies: [], payments: [], note: "No insurance records loaded." }),
+  },
+  {
+    name: "check_claim_eligibility",
+    description:
+      "Insurance companion: for a hospitalisation or medical claim, checks whether the user's health cover was active on the admission date and returns what the records show (insurer, sum insured, members, status, block). Call this before explaining a claim.",
+    parameters: {
+      type: "object",
+      properties: { admission_date: { type: "string", description: "Admission date as YYYY-MM-DD (use today's date from the records if he says 'today')." } },
+      required: ["admission_date"],
+      additionalProperties: false,
+    },
+    parseArgs: (args) => (/^\d{4}-\d{2}-\d{2}$/.test(args?.admission_date ?? "") ? { admissionDate: args.admission_date } : null),
+    run: facts(({ insurance = {}, asOf }, { admissionDate }) => claimEligibility(insurance, admissionDate, asOf)),
+  },
+  {
+    name: "draft_insurance_claim",
+    description:
+      "Insurance companion: prepares a claim intimation draft for the insurer from the user's policy records plus the patient, hospital, date, and reason he gives. Creates a proposal he must confirm. It states honestly if the policy was not active on that date.",
+    parameters: {
+      type: "object",
+      properties: {
+        patient_name: { type: "string" },
+        relationship: { type: "string", description: "e.g. self, father, mother" },
+        hospital: { type: "string" },
+        admission_date: { type: "string", description: "YYYY-MM-DD" },
+        reason: { type: "string", description: "Reason for admission in a few words." },
+      },
+      required: ["patient_name", "hospital", "admission_date", "reason"],
+      additionalProperties: false,
+    },
+    parseArgs: (args) => {
+      const pick = (k, max) => (typeof args?.[k] === "string" ? args[k].trim().slice(0, max) : "");
+      const out = { patient: pick("patient_name", 60), relationship: pick("relationship", 30) || "family member", hospital: pick("hospital", 80), admissionDate: pick("admission_date", 10), reason: pick("reason", 120) };
+      return out.patient && out.hospital && /^\d{4}-\d{2}-\d{2}$/.test(out.admissionDate) ? out : null;
+    },
+    proposesAction: true,
+    run: facts(async ({ insurance = {}, asOf }, claim, ctx) => {
+      const check = claimEligibility(insurance, claim.admissionDate, asOf);
+      const pending = (await ctx.actions.list(ctx.user.id)).find((a) => a.type === "claim_draft" && a.status === "AWAITING_CONFIRMATION");
+      if (pending) return { proposal: pending, eligibility: check };
+      const proposal = await ctx.actions.propose(ctx.user.id, {
+        type: "claim_draft",
+        title: `Claim intimation draft for ${claim.patient} (${check.insurer ?? "health insurer"})`,
+        details: claimLetter(ctx.user, claim, check),
+      });
+      return { proposal, eligibility: check };
+    }),
   },
   {
     name: "get_investments",

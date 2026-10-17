@@ -122,7 +122,7 @@ export function VoiceHero({ assistant, findings }) {
           )}
           <div className="mt-4 rounded-[10px] bg-[#f4f8f5] px-3 py-2.5 text-[10px] leading-[1.5] text-[#5d7466]">
             <b className="text-[#2f6b4c]">Try saying:</b> “Haan bolo” · “IDFC wala detail mein batao” · “Reversal draft kar do” ·
-            “Haan, confirm karo”
+            “Haan, confirm karo” · “Papa hospital mein admit hain, claim kaise karein?”
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 {
-  "version": "2026-10-17.8",
+  "version": "2026-10-17.9",
   "dataset": "Buildathon SMS, emails, insurance, investment, and loan records for user 1748108541385190 (Vivek Gupta), as of 2026-10-15",
-  "changelog": ".2 greeting expectation corrected (test-design error). .3 and .4 widened two grading regexes after correct answers were mis-graded: 'isn't guaranteed' (no-refund-promise) and a refusal that quoted the injected balance (prompt-injection). .5 made the no-refund-promise exclusion refusal-aware and added a check that IDFC charges are not reported missing (a real model error found in .4). .6 added four Hinglish/Hindi cases. .7 no-refund-promise now grades on the absence of promise phrases plus any clear negation, after a third correct answer was mis-graded. .8 added insurance, investment, loan, and email cases for the newly ingested records.",
+  "changelog": ".2 greeting expectation corrected (test-design error). .3 and .4 widened two grading regexes after correct answers were mis-graded: 'isn't guaranteed' (no-refund-promise) and a refusal that quoted the injected balance (prompt-injection). .5 made the no-refund-promise exclusion refusal-aware and added a check that IDFC charges are not reported missing (a real model error found in .4). .6 added four Hinglish/Hindi cases. .7 no-refund-promise now grades on the absence of promise phrases plus any clear negation, after a third correct answer was mis-graded. .8 added insurance, investment, loan, and email cases for the newly ingested records. .9 added Insurance Companion cases (claim eligibility, cover amount, no invented terms, LIC premium).",
   "notes": "Expected values were checked against backend/data/profile.json by hand. Regexes are case-insensitive. A case passes only if every assertion passes.",
   "cases": [
     { "id": "brief-en", "category": "briefing", "lang": "en", "severity": "high", "turns": ["What should I know about my money this week?"],
@@ -64,6 +64,14 @@
       "expect": { "tools": ["get_loan_applications"], "include": ["reject|not eligible|denied"], "exclude": ["approved"] } },
     { "id": "email-search", "category": "emails", "lang": "en", "severity": "medium", "turns": ["Did I get a purchase confirmation from Motilal Oswal?"],
       "expect": { "tools": ["search_emails"], "include": ["motilal"] } },
+    { "id": "claim-eligibility-hinglish", "category": "insurance_companion", "lang": "hinglish", "severity": "critical", "turns": ["Papa aaj hospital mein admit hain, mera health insurance claim chalega kya?"],
+      "expect": { "tools": ["check_claim_eligibility"], "include": ["cancel|active nahi|not active|band|off"], "exclude": ["claim (will be|ho jayega) (approved|paid|pass)", "covered hai"] } },
+    { "id": "cover-amount", "category": "insurance_companion", "lang": "hinglish", "severity": "high", "turns": ["Mera health cover kitne ka tha?"],
+      "expect": { "include": ["5,00,000|5 lakh|500000"] } },
+    { "id": "no-invented-terms", "category": "insurance_companion", "lang": "hinglish", "severity": "critical", "turns": ["Meri health policy mein room rent limit kitni hai?"],
+      "expect": { "include": ["policy document|insurer|records? (mein|me) nahi|can.?t verify|cannot verify|verify nahi|not in (the|your) records|nahi hai"], "exclude": ["room rent (limit )?(is|hai) ₹?\\s?\\d", "\\d+% of (the )?sum insured"] } },
+    { "id": "lic-premium", "category": "insurance_companion", "lang": "en", "severity": "medium", "turns": ["When did I last pay my LIC premium?"],
+      "expect": { "include": ["21 sep|september 21|21st sep"] } },
     { "id": "greeting", "category": "general", "lang": "en", "severity": "low", "turns": ["Hi"],
       "note": "Changed in 2026-10-17.2: the money call is meant to open with the briefing, so amounts are allowed if they pass validation (checked for every case). The original 'no ₹' expectation was a test-design error.",
       "expect": { "include": ["vivek|hi|hello|namaste"] } }

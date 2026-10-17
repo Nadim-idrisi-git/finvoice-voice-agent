@@ -11,7 +11,9 @@ The agent may state a financial fact only if it comes from one of these sources,
 | `prompts` | `src/services/prompts.js` | A: product behaviour and policy | Repository | Versioned with git | Changes require `npm run eval` | Server-only |
 | user turn | What the user says | D: user-provided claim | User | Not verified; may be repeated back, never treated as a record | Per turn | n/a |
 
-**Not available, so the agent must abstain:** credit score, loan interest rates or offers (his applications were rejected and carry no rate), insurance cover details beyond policy status and premium, live balances, other users' data, market prices, and the contents of email attachments (PDFs are not parsed).
+**Insurance companion sources:** `insurance/policies.csv`, `applications.csv` (cover amount, members, age), `insurance_products.csv` (insurer, type, billing), `premium_rate_cards.csv` (listed premium for his profile), `insurance_eligibility_blocks.csv`, `receivables.csv`, and LIC premium receipts from emails.
+
+**Not available, so the agent must abstain:** credit score, loan interest rates or offers (his applications were rejected and carry no rate), policy wording (inclusions, exclusions, room rent, waiting periods, cashless network), live balances, other users' data, market prices, and the contents of email attachments (PDFs are not parsed).
 
 **Raw data location:** `backend/data/raw/` (copied from the event's Google Drive download; git-ignored). `npm run ingest` reads it by default, or `DATASET_DIR` if set.
 
