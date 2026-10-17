@@ -9,7 +9,7 @@ export function cleanName(raw) {
   const words = String(raw).replace(/\s+(Priv\w*|Pvt|Ltd|Limited)\b.*$/i, "").trim().split(/\s+/);
   while (words.length > 1 && words.at(-1).length <= 2) words.pop();
   const name = words.join(" ");
-  return name === name.toUpperCase() ? name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : name;
+  return name === name.toUpperCase() || name === name.toLowerCase() ? name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : name;
 }
 /** Readable biller names from bill-reminder SMS. */
 function cleanBiller(raw) {
@@ -213,3 +213,32 @@ function computeBriefing(profile) {
 
 const bankFromSender = (s) =>
   ({ HDFCBK: "HDFC Bank", HDFCBN: "HDFC Bank", PNBSMS: "Punjab National Bank", IDFCFB: "IDFC FIRST Bank" })[s] ?? s;
+
+/** Recurring payments for the Subscriptions view and tool: mandates/autopays plus active SIPs, with evidence. */
+export function recurringPayments(profile) {
+  const mandates = recurringMandates(profile.facts)
+    .filter((m) => m.perWeek >= 0.2)
+    .map((m) => ({
+      merchant: m.merchant,
+      kind: /bachatt|groww|clearing|fund|invest/i.test(m.merchant) ? "Savings / investment autopay" : /trusave|kreditbee|bajaj|finance|fintech/i.test(m.merchant) ? "Loan / fintech autopay" : "Autopay",
+      perWeek: m.perWeek,
+      last30DaysPaise: m.last30DaysPaise,
+      typicalAmountPaise: m.amountsPaise.at(-1),
+      accounts: m.accounts,
+      lastSeen: m.lastSeen,
+      evidence: m.evidence,
+    }));
+  const sips = (profile.investments?.sips ?? [])
+    .filter((s) => s.status === "ACTIVE")
+    .map((s) => ({
+      merchant: s.fund,
+      kind: `SIP (${s.frequency.toLowerCase()})`,
+      perWeek: s.frequency === "DAILY" ? 5 : s.frequency === "WEEKLY" ? 1 : 0.25,
+      last30DaysPaise: null,
+      typicalAmountPaise: s.amountPaise,
+      accounts: [],
+      lastSeen: s.startedOn,
+      evidence: [s.source],
+    }));
+  return [...mandates, ...sips];
+}

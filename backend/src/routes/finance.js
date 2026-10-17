@@ -13,7 +13,7 @@ import {
 } from "../modules/analytics.js";
 import { HttpError } from "../http.js";
 import { loadFinance } from "../store/finance.js";
-import { briefing } from "../modules/insights.js";
+import { briefing, recurringPayments } from "../modules/insights.js";
 
 // Read-only, owner-scoped views over the user's financial records.
 export function financeRoutes({ store }) {
@@ -43,7 +43,7 @@ export function financeRoutes({ store }) {
       transactions: [...inMonth].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 8),
       dailySpending: [...dayTotals].sort((a, b) => a[0] - b[0]).map(([day, amountPaise]) => ({ day, amountPaise })),
       unusual: unusualSpending(transactions),
-      subscriptions: recurringSubscriptions(transactions),
+      subscriptions: store.profile ? recurringPayments(store.profile) : recurringSubscriptions(transactions),
       bills,
       emis,
       briefing: store.profile ? briefing(store.profile) : null,

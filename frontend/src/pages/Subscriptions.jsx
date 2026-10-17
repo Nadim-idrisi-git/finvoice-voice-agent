@@ -8,14 +8,14 @@ export function Subscriptions({ dashboard }) {
   return (
     <>
       <PageHeading
-        title="Recurring subscriptions"
-        subtitle="Merchants appearing in multiple synthetic months. No cancellation integration is connected."
+        title="Recurring payments"
+        subtitle="Autopays, mandates, and SIPs found in your bank SMS and investment records. No cancellation integration is connected."
       />
       <div className={`${card} mt-4 p-[19px]`}>
         <div className="mb-[7px] flex items-start justify-between">
           <div>
-            <h3 className={cardTitle}>Your subscriptions</h3>
-            <p className={cardSubtitle}>Recurring pattern candidates, not confirmed contracts</p>
+            <h3 className={cardTitle}>Who debits you regularly</h3>
+            <p className={cardSubtitle}>From mandates and autopay SMS; amounts are totals over the last 30 days</p>
           </div>
           <span className="rounded-full border border-[#e4ebe5] px-2.5 py-1.5 text-[9px] font-semibold whitespace-nowrap text-[#68766e]">
             {subscriptions.length} found
@@ -30,12 +30,16 @@ export function Subscriptions({ dashboard }) {
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <b className="text-[10px]">{s.merchant}</b>
                 <small className="text-[8px] leading-snug text-[#939d96]">
-                  Seen in {s.occurrences} months · synthetic transaction pattern
+                  {s.kind
+                    ? `${s.kind} · about ${Math.round(s.perWeek * 10) / 10} times a week${s.accounts?.length ? ` · from account ${s.accounts.join(", ")}` : ""}`
+                    : `Seen in ${s.occurrences} months · synthetic transaction pattern`}
                 </small>
               </div>
               <strong className="flex flex-col items-end gap-[3px] text-[10px]">
-                {money(s.monthlyAmountPaise)}
-                <small className="text-[8px] font-normal text-[#939d96]">/ month avg.</small>
+                {money(s.last30DaysPaise ?? s.typicalAmountPaise ?? s.monthlyAmountPaise)}
+                <small className="text-[8px] font-normal text-[#939d96]">
+                  {s.last30DaysPaise != null ? "last 30 days" : s.typicalAmountPaise != null ? "per debit" : "/ month avg."}
+                </small>
               </strong>
             </div>
           ))

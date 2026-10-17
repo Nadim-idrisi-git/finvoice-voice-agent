@@ -19,6 +19,7 @@ import {
   latestBalances,
   minimumBalanceTraps,
   recurringMandates,
+  recurringPayments,
 } from "../modules/insights.js";
 
 // Server-side registry of the tools the AI may call, shared by the text agent and live voice.
@@ -321,7 +322,8 @@ const tools = [
   {
     name: "find_recurring_subscriptions",
     description: "Find recurring subscription merchants and their average monthly cost.",
-    run: finance(({ transactions }) => recurringSubscriptions(transactions)),
+    run: async (ctx) =>
+      ctx.store.profile ? recurringPayments(ctx.store.profile) : recurringSubscriptions((await loadFinance(ctx.store, ctx.user.id)).transactions),
   },
   {
     name: "get_upcoming_bills",
