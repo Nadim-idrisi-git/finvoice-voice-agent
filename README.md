@@ -15,9 +15,9 @@ The demo identity is explicitly labeled and contains synthetic records. The API 
 
 ## Workspace
 
-- `apps/web`: React, JavaScript, Vite, responsive dashboard and assistant.
-- `apps/api`: versioned Express API, analytics, tools, actions, Mongo connection, and provider adapter.
-- `packages/shared`: shared Zod schemas and domain types.
+- `apps/web`: React + Vite dashboard split into pages, components, and a `useAssistant` hook.
+- `apps/api`: versioned Express API: config, owner-scoped store, action service, voice tool registry, routes, and deterministic analytics.
+- `packages/shared`: shared Zod schemas and money/month formatting helpers.
 - `docs`: architecture, security, evaluation, deployment, API, costs, and decision records.
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md), [VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [DEPLOYMENT.md](docs/DEPLOYMENT.md). All financial records in this MVP are synthetic. See [SECURITY.md](docs/SECURITY.md) for trust boundaries and [TESTING.md](docs/TESTING.md) for checks.
