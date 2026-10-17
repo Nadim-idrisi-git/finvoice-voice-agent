@@ -22,4 +22,4 @@ services:
       - key: OPENAI_VOICE
         value: marin
       - key: OPENAI_TRANSCRIBE_MODEL
-        value: gpt-4o-mini-transcribe
+        value: gpt-4o-transcribe

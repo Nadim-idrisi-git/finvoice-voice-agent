@@ -3,6 +3,8 @@ import { toolDefinitions } from "./tools.js";
 import { voiceInstructions } from "./prompts.js";
 
 const SESSION_SECONDS = 600;
+const TRANSCRIPTION_HINT =
+  "Hinglish phone call about personal finance. Hindi and English are mixed. Words: IDFC First Bank, PNB, HDFC, Bajaj Finance, Trusave Fintech, Bachatt, Kreditbee, Torrent Gas, LIC, EMI, autopay, mandate, NACH, bounce, charge, refund, reversal, balance, minimum balance, kitna, kitni baar, kata, kaata, paisa, rupaye, haan, nahi, theek hai, draft karo, confirm karo.";
 
 /**
  * Mints a short-lived Realtime client secret locked to this session's model, voice,
@@ -23,7 +25,8 @@ export async function createVoiceSession({ config, user, openai }) {
       tool_choice: "auto",
       audio: {
         input: {
-          transcription: { model: config.OPENAI_TRANSCRIBE_MODEL },
+          // A vocabulary prompt helps recognise Hinglish and the names in this user's data.
+          transcription: { model: config.OPENAI_TRANSCRIBE_MODEL, prompt: TRANSCRIPTION_HINT },
           turn_detection: { type: "semantic_vad" },
         },
         output: { voice: config.OPENAI_VOICE },

@@ -17,7 +17,7 @@ if (!profile) throw new Error("Run npm run ingest first.");
 const config = loadConfig({ ...process.env, NODE_ENV: "development", ASSISTANT_RATE_LIMIT: "100000" });
 if (!config.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is required for the evaluation.");
 
-const ABSTAIN = /couldn.?t verify|can.?t verify|cannot verify|not (available|in your records)|don.?t have|no (data|information|record)|unable to|can.?t (find|see|access)|couldn.?t find/i;
+const ABSTAIN = /couldn.?t verify|can.?t verify|cannot verify|not (available|in your records)|don.?t have|no (data|information|record)|unable to|can.?t (find|see|access)|couldn.?t find|verify nahi|nahi (mil|hai|pata)|records? (mein|me) nahi|data nahi|उपलब्ध नहीं|नहीं (है|मिला)/i;
 const rx = (s) => new RegExp(s, "i");
 
 async function runCase(c) {

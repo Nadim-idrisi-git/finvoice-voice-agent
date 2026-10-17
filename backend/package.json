@@ -13,7 +13,8 @@
     "check": "for f in $(find src -name '*.js'); do node --check \"$f\" || exit 1; done",
     "seed": "node src/seed-cli.js",
     "ingest": "node src/data/ingest.js",
-    "eval": "node eval/run.js"
+    "eval": "node eval/run.js",
+    "voice-smoke": "node eval/realtime-smoke.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

@@ -116,6 +116,7 @@ export function latestBalances(facts) {
     account: f.account,
     balancePaise: f.balancePaise,
     asOf: day(f.at),
+    asOfSpoken: pretty(day(f.at)),
     evidence: [f.smsId],
   }));
 }
@@ -170,6 +171,7 @@ export function briefing(profile) {
   return {
     user: profile.user.name,
     asOf: profile.asOf,
+    asOfSpoken: profile.asOf ? pretty(profile.asOf).replace(/^(\d+) (\w+)$/, "$1 $2") : null,
     topFindings: findings.sort((a, b) => a.priority - b.priority).slice(0, 3),
   };
 }

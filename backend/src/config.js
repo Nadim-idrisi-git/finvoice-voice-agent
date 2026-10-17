@@ -39,7 +39,7 @@ export function loadConfig(env = process.env) {
     OPENAI_MODEL: text(env, "OPENAI_MODEL", "gpt-6-luna"),
     OPENAI_REALTIME_MODEL: text(env, "OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
     OPENAI_VOICE: text(env, "OPENAI_VOICE", "marin"),
-    OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe"),
+    OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),
     ASSISTANT_RATE_LIMIT: positiveInt(env, "ASSISTANT_RATE_LIMIT", 20),
   };
 }

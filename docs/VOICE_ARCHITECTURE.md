@@ -2,6 +2,8 @@
 
 Provider: OpenAI Realtime API over WebRTC (see [ADR 0002](adr/0002-openai.md)).
 
+**Hinglish first.** The voice prompt puts language rules first: natural Hinglish by default (Hindi structure with everyday English money words), mirroring the user if he switches to pure English or Hindi, Indian number words ("do hazaar teen sau saath rupaye", lakh/crore), spoken dates, and at most two short sentences per turn. Input transcription uses `gpt-4o-transcribe` with a vocabulary prompt (bank and merchant names from the data plus common Hinglish money words) to reduce recognition errors on mixed speech. Tools return spoken date fields (`asOfSpoken`) so the model never reads ISO dates aloud.
+
 **Session setup.** The browser calls `POST /api/v1/voice/session`. The backend calls `POST https://api.openai.com/v1/realtime/client_secrets` with the long-lived key and a session config: `type: "realtime"`, `model` (`OPENAI_REALTIME_MODEL`, default `gpt-realtime-2.1`), `instructions`, the shared tool definitions, `audio.input.transcription.model` (`OPENAI_TRANSCRIBE_MODEL`), `audio.input.turn_detection: { type: "semantic_vad" }`, and `audio.output.voice` (`OPENAI_VOICE`, default `marin`). The secret expires after 10 minutes. Only the ephemeral `value` reaches the browser.
 
 **Media.** The browser creates an `RTCPeerConnection`, adds the microphone track (echo cancellation, noise suppression, auto gain), creates the `oai-events` data channel, and posts its SDP offer to `https://api.openai.com/v1/realtime/calls` with `Authorization: Bearer <ephemeral key>`. Model audio arrives as a remote track played by an `<audio>` element. There is no client-side PCM encoding or playback queue.
