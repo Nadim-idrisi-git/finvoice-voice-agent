@@ -25,7 +25,7 @@ describe("answer validator", () => {
     assert.deepEqual(r.unsupportedAmounts.map((a) => a.text), ["₹1,00,000", "₹120"]);
   });
   it("does not treat negated statements as success claims", () => {
-    for (const answer of ["I've drafted it; it has not been sent to the bank yet.", "Draft ready, abhi bheja nahi gaya hai.", "It hasn't been submitted."])
+    for (const answer of ["There is no proposed action yet, so nothing has been confirmed.", "I have not confirmed anything.", "I've drafted it; it has not been sent to the bank yet.", "Draft ready, abhi bheja nahi gaya hai.", "It hasn't been submitted."])
       assert.equal(validateAnswer({ answer, toolResults: [], hasSucceededAction: false }).unsupportedSuccess, false, answer);
   });
   it("rejects 'not found' answers when no tool was called, but allows them after a lookup", () => {

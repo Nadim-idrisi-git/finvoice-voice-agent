@@ -43,6 +43,8 @@ These reduce and detect errors; they do not guarantee correctness.
 
 Two lessons: answers vary between runs, so run the suite several times before a release and treat any critical failure as blocking; and grading regexes need refusal-aware patterns. Three of the four fixes were to the tests, made after reading answers that were correct; one was a real defect found by the suite.
 
+**Regression after the UI/briefing-text change:** 30/31 (critical 16/17): the validator wrongly blocked a correct refusal ("nothing has been confirmed", "I have not confirmed anything") because negation handling missed "confirmed"/"nothing". Fixed with tests; re-run **31/31, critical 17/17**.
+
 ## Speed experiment (2026-10-17)
 
 | Text agent setting | Passed | p50 / p95 | Validator corrections |

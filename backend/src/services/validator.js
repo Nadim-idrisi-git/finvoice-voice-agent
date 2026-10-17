@@ -36,7 +36,7 @@ export function supportedAmounts(results) {
 const NOT_FOUND_CLAIM = /couldn.?t find|could not find|can.?t find|no (matching )?(record|transaction|payment|charge)s?\b|didn.?t find|not (in|found in) your records|nahi mil(a|i)/i;
 
 // Negated statements ("has not been sent", "nahi bheja") are not success claims.
-const NEGATED = /\b(?:not|never|hasn.?t|haven.?t|isn.?t|wasn.?t|won.?t|nahi|nahin|nahi hua)\b[^.!?]{0,30}?\b(?:done|completed|submitted|sent|ho gaya|kar diya|bhej(?:a|diya))\b[^.!?]*/gi;
+const NEGATED = /\b(?:not|never|nothing|no|hasn.?t|haven.?t|isn.?t|wasn.?t|won.?t|nahi|nahin)\b[^.!?]{0,40}?\b(?:done|completed|submitted|sent|saved|confirmed|ho gaya|kar diya|bhej(?:a|diya))\b[^.!?]*/gi;
 // A success claim is about the assistant's own action (draft, request, reminder...), not events in the records
 // ("loan reject ho gaya" is a fact from the data, not a claim that the assistant did something).
 const ACTION_WORDS = String.raw`(?:draft|request|reminder|alert|action|proposal|reversal|dispute|actions tab)`;
