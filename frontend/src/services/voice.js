@@ -120,7 +120,7 @@ export class LiveVoiceSession {
     for (const call of calls) {
       let result;
       try {
-        const { result: data, proposesAction } = await api.runTool(call.name, JSON.parse(call.arguments || "{}"));
+        const { result: data, proposesAction } = await api.runTool(call.name, JSON.parse(call.arguments || "{}"), call.call_id);
         if (proposesAction) this.callbacks.actionProposed?.();
         result = data;
       } catch (error) {

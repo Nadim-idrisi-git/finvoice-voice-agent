@@ -3,14 +3,17 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "test": "node --test test/*.test.js",
     "check": "for f in $(find src -name '*.js'); do node --check \"$f\" || exit 1; done",
     "seed": "node src/seed-cli.js",
-    "ingest": "node src/data/ingest.js"
+    "ingest": "node src/data/ingest.js",
+    "eval": "node eval/run.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

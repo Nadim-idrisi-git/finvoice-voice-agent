@@ -70,7 +70,7 @@ export function createApp({
     next();
   });
   app.use("/api/v1/voice/session", rateLimit({ limit: 3 }));
-  app.use("/api/v1/assistant/message", rateLimit({ limit: 20 }));
+  app.use("/api/v1/assistant/message", rateLimit({ limit: config.ASSISTANT_RATE_LIMIT }));
   app.use("/api/v1", financeRoutes({ store }));
   app.use("/api/v1", actionRoutes({ actions }));
   app.use("/api/v1", assistantRoutes({ store, actions, config, openai, log }));

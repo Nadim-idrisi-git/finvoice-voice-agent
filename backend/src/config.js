@@ -9,6 +9,12 @@ const text = (env, name, fallback) => {
   return value ? value : fallback;
 };
 
+function positiveInt(env, name, fallback) {
+  const value = Number(text(env, name, String(fallback)));
+  if (!Number.isInteger(value) || value < 1) fail(name, "expected a positive integer");
+  return value;
+}
+
 /** Validates environment variables once at startup; throws on invalid values. */
 export function loadConfig(env = process.env) {
   const NODE_ENV = text(env, "NODE_ENV", "development");
@@ -34,5 +40,6 @@ export function loadConfig(env = process.env) {
     OPENAI_REALTIME_MODEL: text(env, "OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
     OPENAI_VOICE: text(env, "OPENAI_VOICE", "marin"),
     OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe"),
+    ASSISTANT_RATE_LIMIT: positiveInt(env, "ASSISTANT_RATE_LIMIT", 20),
   };
 }

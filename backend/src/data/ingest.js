@@ -148,10 +148,21 @@ function parse(sms) {
     t.match(new RegExp(String.raw`Credit Alert! ${AMOUNT} credited .*? from (?:VPA )?(\S+)`, "i")) ??
     t.match(new RegExp(String.raw`Received! ${AMOUNT} in .*? For (?:IMPS|NEFT|UPI) -?(.+?)-`, "i")) ??
     t.match(new RegExp(String.raw`${AMOUNT} deposited in .*? for (?:NEFT Cr-\S+-|FT- )?(.+?)[.-]`, "i")) ??
-    t.match(new RegExp(String.raw`[Cc]redited (?:with|by|for) ${AMOUNT}.*?(?:from|by|thru) (.+?)[.(]`, "i"));
+    t.match(new RegExp(String.raw`[Cc]redited (?:with|by|for) ${AMOUNT}.*?(?:from|by|thru) (.+?)[.(]`, "i")) ??
+    t.match(new RegExp(String.raw`[Cc]redited with ${AMOUNT}()`, "i"));
   if (credit)
     return { ...base, type: "credit", amountPaise: num(credit[1]), counterparty: clean(credit[2] ?? "Unknown").slice(0, 50), account: account(t), balancePaise: balance(t) };
 
+  return null;
+}
+
+/** Rejects facts that would be unsafe to state: bad amounts, dates, or missing evidence. */
+function validateFact(f) {
+  if (!f.smsId) return "missing sms_id";
+  if (!Number.isInteger(f.amountPaise) || f.amountPaise <= 0) return "invalid amount";
+  if (f.amountPaise > 10_000_000_00) return "amount out of range";
+  if (Number.isNaN(Date.parse(f.at))) return "invalid timestamp";
+  if (f.dueOn && !/^\d{4}-\d{2}-\d{2}$/.test(f.dueOn)) return "invalid due date";
   return null;
 }
 
@@ -165,13 +176,24 @@ async function main() {
     if (r.user_id === USER_ID) Object.assign(user, { id: r.user_id, name: `${r.first_name} ${r.last_name}`.trim() });
   });
   const facts = [];
+  const seenSms = new Set();
+  const quality = { duplicateSmsIds: 0, transactional: 0, unparsedMoneySms: 0, unparsedSamples: [], rejected: [] };
   let scanned = 0;
   await readCsv(path.join(DATASET_DIR, "sms/sms.csv"), (r) => {
     if (r.user_id !== USER_ID) return;
     scanned++;
+    if (seenSms.has(r.sms_id)) return void quality.duplicateSmsIds++;
+    seenSms.add(r.sms_id);
     if (!/-(S|T)$/.test(r.sender) || /otp|one time password|verification code/i.test(r.body_text)) return;
+    quality.transactional++;
     const fact = parse(r);
-    if (fact) facts.push(fact);
+    const problem = fact && validateFact(fact);
+    if (problem) quality.rejected.push({ smsId: r.sms_id, problem });
+    else if (fact) facts.push(fact);
+    else if (BANK_SENDER.test(r.sender) && /(?:Rs\.?|INR|₹)\s?\d/i.test(r.body_text) && /debit|credit|deduct|sent|withdrawn|received|deposited/i.test(r.body_text)) {
+      quality.unparsedMoneySms++;
+      if (quality.unparsedSamples.length < 15) quality.unparsedSamples.push({ smsId: r.sms_id, text: r.body_text.slice(0, 140) });
+    }
   });
   facts.sort((a, b) => a.at.localeCompare(b.at));
   const profile = {
@@ -180,12 +202,15 @@ async function main() {
     user: { id: USER_ID, name: user.name ?? "Demo user" },
     asOf: facts.at(-1)?.at.slice(0, 10) ?? null,
     smsScanned: scanned,
+    quality: { ...quality, rejected: quality.rejected.slice(0, 20), rejectedCount: quality.rejected.length },
     facts,
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(profile, null, 1));
   const byType = facts.reduce((acc, f) => ({ ...acc, [f.type]: (acc[f.type] ?? 0) + 1 }), {});
   console.log(`${profile.user.name}: scanned ${scanned} SMS → ${facts.length} facts`, byType, `→ ${OUT}`);
+  console.log("Data quality:", { duplicateSmsIds: quality.duplicateSmsIds, transactional: quality.transactional, rejected: quality.rejected.length, unparsedBankMoneySms: quality.unparsedMoneySms });
+  for (const s of quality.unparsedSamples.slice(0, 8)) console.log("  unparsed:", s.smsId, s.text);
 }
 
 await main();

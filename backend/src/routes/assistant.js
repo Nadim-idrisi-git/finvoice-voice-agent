@@ -12,6 +12,8 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
   const router = Router();
   // Last OpenAI response per user, for short-term conversation memory in text chat.
   const lastResponse = new Map();
+  // Tool results from the user's previous turn, so follow-up answers can cite them.
+  const lastEvidence = new Map();
 
   async function answerWithRules(message, ownerId) {
     const result = answerFinancialQuestion(message, await loadFinance(store, ownerId));
@@ -39,15 +41,18 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
           openai,
           model: config.OPENAI_MODEL,
           previousResponseId: lastResponse.get(user.id),
+          evidenceCarryover: lastEvidence.get(user.id) ?? [],
+          log,
         });
         lastResponse.set(user.id, reply.responseId);
+        lastEvidence.set(user.id, reply.toolResults);
         source = "openai";
       } catch (err) {
         log.warn({ requestId: req.id, error: err instanceof Error ? err.message : "unknown" }, "Agent failed; using rules");
       }
     }
     reply ??= await answerWithRules(value.message, user.id);
-    const { responseId: _ignored, ...publicReply } = reply;
+    const { responseId: _id, toolResults: _evidence, ...publicReply } = reply;
     res.json({
       ...publicReply,
       actionProposal: reply.actionProposals[0] ?? null,
@@ -57,8 +62,19 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
     });
   });
 
+  // Voice tool calls are idempotent per OpenAI call_id: a retried or duplicated call returns the
+  // first result instead of running the tool (and creating an action) twice.
+  const toolCallResults = new Map();
   router.post("/tools/:name", async (req, res) => {
-    res.json(await executeTool(req.params.name, req.body?.args, { user: res.locals.user, store, actions }));
+    const callId = typeof req.body?.callId === "string" ? req.body.callId.slice(0, 100) : null;
+    const key = callId && `${res.locals.user.id}:${callId}`;
+    if (key && toolCallResults.has(key)) return res.json({ ...toolCallResults.get(key), replayed: true });
+    const result = await executeTool(req.params.name, req.body?.args, { user: res.locals.user, store, actions });
+    if (key) {
+      toolCallResults.set(key, result);
+      if (toolCallResults.size > 5000) toolCallResults.delete(toolCallResults.keys().next().value);
+    }
+    res.json(result);
   });
 
   router.post("/voice/session", async (_req, res) => {

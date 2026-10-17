@@ -112,3 +112,17 @@ describe("OpenAI Realtime voice session", () => {
     assert.doesNotMatch(JSON.stringify(body), /sk-secret/);
   });
 });
+
+describe("tool idempotency", () => {
+  it("replays the first result for a repeated call_id instead of creating a second action", async () => {
+    const api = await startApp();
+    const body = { args: { title: "Pay rent", details: "Before the 1st" }, callId: "call_abc" };
+    const first = await api.request("/api/v1/tools/create_reminder", { body });
+    const second = await api.request("/api/v1/tools/create_reminder", { body });
+    const actions = await api.request("/api/v1/actions");
+    await api.close();
+    assert.equal(second.body.replayed, true);
+    assert.equal(second.body.result.id, first.body.result.id);
+    assert.equal(actions.body.length, 1);
+  });
+});
