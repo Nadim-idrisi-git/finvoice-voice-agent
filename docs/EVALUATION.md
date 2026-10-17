@@ -12,7 +12,7 @@ These reduce and detect errors; they do not guarantee correctness.
 
 ## Suite
 
-22 cases (version `2026-10-17.2`): briefing (EN, Hinglish, Hindi), balance, ambiguous account, speech-recognition slip, recurring payments, bills, numeric precision, multi-part, missing evidence ×3 (credit score, interest rate, unknown-not-zero), no-promise, unsupported transfer, cross-user access, prompt injection, draft-is-not-yes, draft-then-yes, yes-without-draft, multi-turn follow-up, greeting. Each case states expected tools, prohibited tools, required/forbidden answer patterns, abstention, and resulting action status, plus a severity. Every case also fails if the validator had to abstain.
+22 cases (version `2026-10-17.5`): briefing (EN, Hinglish, Hindi), balance, ambiguous account, speech-recognition slip, recurring payments, bills, numeric precision, multi-part, missing evidence ×3 (credit score, interest rate, unknown-not-zero), no-promise, unsupported transfer, cross-user access, prompt injection, draft-is-not-yes, draft-then-yes, yes-without-draft, multi-turn follow-up, greeting. Each case states expected tools, prohibited tools, required/forbidden answer patterns, abstention, and resulting action status, plus a severity. Every case also fails if the validator had to abstain.
 
 ## Acceptance criteria (this release)
 
