@@ -19,5 +19,7 @@ const api = {
   confirmAction: (id) =>
     request(`/actions/${id}/confirm`, { method: "POST", body: JSON.stringify({ confirmation: true }) }),
   actions: () => request("/actions"),
+  validateVoice: (transcript, userTranscript) =>
+    request("/voice/validate", { method: "POST", body: JSON.stringify({ transcript, userTranscript }) }),
 };
 export { api };

@@ -56,6 +56,7 @@ export async function runAgent({ message, ctx, openai, model, previousResponseId
       toolResults,
       userMessage: message,
       hasSucceededAction: (await ctx.actions.list(ctx.user.id)).some((a) => a.status === "SUCCEEDED"),
+      toolsCalled: toolsUsed.length,
     });
 
   let answer = outputText(response);
@@ -67,6 +68,7 @@ export async function runAgent({ message, ctx, openai, model, previousResponseId
       result.unsupportedAmounts.length &&
         `these amounts do not appear in any tool result: ${result.unsupportedAmounts.map((a) => a.text).join(", ")}`,
       result.unsupportedSuccess && "you said something was done, but no action has been confirmed",
+      result.uncheckedNotFound && "you said something was not found without calling any tool to check; call the relevant tool first",
     ].filter(Boolean);
     response = await respond({
       ...base,
@@ -90,6 +92,11 @@ export async function runAgent({ message, ctx, openai, model, previousResponseId
     actionProposals,
     toolsUsed,
     toolResults,
-    validation: { status, unsupportedAmounts: result.unsupportedAmounts.map((a) => a.text), unsupportedSuccess: result.unsupportedSuccess },
+    validation: {
+      status,
+      unsupportedAmounts: result.unsupportedAmounts.map((a) => a.text),
+      unsupportedSuccess: result.unsupportedSuccess,
+      uncheckedNotFound: result.uncheckedNotFound,
+    },
   };
 }

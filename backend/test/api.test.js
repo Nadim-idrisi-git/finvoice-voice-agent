@@ -126,3 +126,15 @@ describe("tool idempotency", () => {
     assert.equal(actions.body.length, 1);
   });
 });
+
+describe("voice answer validation", () => {
+  it("accepts spoken amounts that tools returned and flags invented ones", async () => {
+    const api = await startApp();
+    await api.request("/api/v1/tools/get_upcoming_bills", { body: {} });
+    const good = await api.request("/api/v1/voice/validate", { body: { transcript: "Your electricity bill is ₹2,350." } });
+    const bad = await api.request("/api/v1/voice/validate", { body: { transcript: "Your electricity bill is ₹9,999." } });
+    await api.close();
+    assert.equal(good.body.ok, true);
+    assert.deepEqual(bad.body.unsupportedAmounts, ["₹9,999"]);
+  });
+});

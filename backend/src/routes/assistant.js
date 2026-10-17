@@ -6,6 +6,7 @@ import { loadFinance } from "../store/finance.js";
 import { runAgent } from "../services/agent.js";
 import { executeTool } from "../services/tools.js";
 import { createVoiceSession } from "../services/voice.js";
+import { validateAnswer } from "../services/validator.js";
 
 /** Text chat (OpenAI agent with rule-based fallback), voice tool execution, and voice session minting. */
 export function assistantRoutes({ store, actions, config, openai, log }) {
@@ -65,16 +66,35 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
   // Voice tool calls are idempotent per OpenAI call_id: a retried or duplicated call returns the
   // first result instead of running the tool (and creating an action) twice.
   const toolCallResults = new Map();
+  // Recent tool results per user (server-produced, never client-supplied) for post-hoc voice validation.
+  const recentResults = new Map();
+  const remember = (userId, result) => recentResults.set(userId, [...(recentResults.get(userId) ?? []), result].slice(-40));
   router.post("/tools/:name", async (req, res) => {
     const callId = typeof req.body?.callId === "string" ? req.body.callId.slice(0, 100) : null;
     const key = callId && `${res.locals.user.id}:${callId}`;
     if (key && toolCallResults.has(key)) return res.json({ ...toolCallResults.get(key), replayed: true });
     const result = await executeTool(req.params.name, req.body?.args, { user: res.locals.user, store, actions });
+    remember(res.locals.user.id, result.result);
     if (key) {
       toolCallResults.set(key, result);
       if (toolCallResults.size > 5000) toolCallResults.delete(toolCallResults.keys().next().value);
     }
     res.json(result);
+  });
+
+  // Voice answers are spoken while generated, so they are validated right after: the transcript is checked
+  // against tool results this server produced for the user. The client then asks the model to self-correct.
+  router.post("/voice/validate", async (req, res) => {
+    const transcript = typeof req.body?.transcript === "string" ? req.body.transcript.slice(0, 2000) : "";
+    const userMessage = typeof req.body?.userTranscript === "string" ? req.body.userTranscript.slice(0, 1000) : "";
+    const result = validateAnswer({
+      answer: transcript,
+      toolResults: recentResults.get(res.locals.user.id) ?? [],
+      userMessage,
+      hasSucceededAction: (await actions.list(res.locals.user.id)).some((a) => a.status === "SUCCEEDED"),
+    });
+    if (!result.ok) log.warn({ requestId: req.id, unsupported: result.unsupportedAmounts.map((a) => a.text) }, "Voice answer failed validation");
+    res.json({ ok: result.ok, unsupportedAmounts: result.unsupportedAmounts.map((a) => a.text), unsupportedSuccess: result.unsupportedSuccess });
   });
 
   router.post("/voice/session", async (_req, res) => {

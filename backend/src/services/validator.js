@@ -31,6 +31,11 @@ export function supportedAmounts(results) {
   return allowed;
 }
 
+// "Not found" is only allowed after a tool actually looked (unknown is not zero; absence needs evidence).
+const NOT_FOUND_CLAIM = /couldn.?t find|could not find|can.?t find|no (matching )?(record|transaction|payment|charge)s?\b|didn.?t find|not (in|found in) your records|nahi mil(a|i)/i;
+
+// Negated statements ("has not been sent", "nahi bheja") are not success claims.
+const NEGATED = /\b(?:not|never|hasn.?t|haven.?t|isn.?t|wasn.?t|won.?t|nahi|nahin|nahi hua)\b[^.!?]{0,30}?\b(?:done|completed|submitted|sent|ho gaya|kar diya|bhej(?:a|diya))\b[^.!?]*/gi;
 const SUCCESS_CLAIM = /\b(done|completed|submitted|sent to the bank|has been sent|ho gaya|ho gayi|confirm ho (?:gaya|chuka)|kar diya|bhej diya)\b/i;
 
 /**
@@ -39,13 +44,20 @@ const SUCCESS_CLAIM = /\b(done|completed|submitted|sent to the bank|has been sen
  * - success: claims that something was done require a SUCCEEDED action.
  * Returns { ok, unsupportedAmounts, unsupportedSuccess }.
  */
-export function validateAnswer({ answer, toolResults, userMessage, hasSucceededAction }) {
+export function validateAnswer({ answer, toolResults, userMessage, hasSucceededAction, toolsCalled }) {
   const allowed = supportedAmounts(toolResults);
   for (const a of moneyAmounts(userMessage ?? "")) allowed.add(a.paise);
   // Exact match only: no unsupported rounding (₹119.67 must not become ₹120).
   const unsupportedAmounts = moneyAmounts(answer).filter((a) => !allowed.has(a.paise));
-  const unsupportedSuccess = SUCCESS_CLAIM.test(answer) && !hasSucceededAction;
-  return { ok: unsupportedAmounts.length === 0 && !unsupportedSuccess, unsupportedAmounts, unsupportedSuccess };
+  const unsupportedSuccess = SUCCESS_CLAIM.test(String(answer).replace(NEGATED, "")) && !hasSucceededAction;
+  // toolsCalled is undefined when the caller cannot know (voice); only enforce when known.
+  const uncheckedNotFound = toolsCalled === 0 && NOT_FOUND_CLAIM.test(answer);
+  return {
+    ok: unsupportedAmounts.length === 0 && !unsupportedSuccess && !uncheckedNotFound,
+    unsupportedAmounts,
+    unsupportedSuccess,
+    uncheckedNotFound,
+  };
 }
 
 export const ABSTAIN_MESSAGE =

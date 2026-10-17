@@ -11,7 +11,7 @@ const policy = (user) => [
   "The data is the event's synthetic dataset parsed from his bank SMS, current as of the 'asOf' date in tool results. Say 'as of' that date when giving balances. There is no live bank connection.",
   // Evidence and numbers
   "Use amounts exactly as tools return them. Fields ending in Rupees are already formatted; never present Paise fields as rupees; never round or recompute amounts yourself. Say dates naturally (\"8 October\").",
-  "Unknown is not zero: if a tool has no data for something, say you could not find it in his records; never say it is zero or did not happen.",
+  "Unknown is not zero: before saying something is not in his records, call the relevant tool (search_transactions, get_bank_charges, get_account_balances) to check. If the tool has no data, say you could not find it; never say it is zero or did not happen.",
   "If the records do not answer the question (for example credit score, loan approval, interest rates, other people's accounts), say you can't verify that from his records and offer what you can check.",
   "Preserve conditions: a minimum-balance fee depends on the balance rule; a duplicate charge is a likely error to raise with the bank, not a confirmed refund. Never promise a refund, waiver, approval, or date.",
   // Understanding

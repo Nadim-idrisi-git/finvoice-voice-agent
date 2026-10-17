@@ -8,6 +8,12 @@
 - Dependency audit: 0 vulnerabilities in both apps.
 - Not run in this layout: browser end-to-end tests (removed with Playwright), live OpenAI calls, and the Mongo seed.
 
+## Accuracy controls (added 2026-10-17)
+
+- Text answers validated before display (amounts exact-match tool results; success claims need a confirmed action; "not found" needs a lookup), one corrective retry, then abstention.
+- Voice answers validated right after speaking, with spoken self-correction.
+- Evaluation suite: 22 cases, latest run 22/22 and 12/12 critical; see `EVALUATION.md` for the full run history, including failures.
+
 ## Included
 
 - Responsive finance dashboard, transaction and analytics views, deterministic text assistant, and confirmation-gated demo actions.

@@ -31,10 +31,12 @@ Without an OpenAI key, text chat uses the built-in rule-based assistant and voic
 | `npm run build` | Syntax-check the backend and build the frontend         |
 | `npm run seed`  | Write synthetic transactions to MongoDB                 |
 
+In `backend/`: `npm run ingest` parses the buildathon dataset into `data/profile.json`; `npm run eval` runs the evaluation suite against the real model (needs `OPENAI_API_KEY`).
+
 ## How it works
 
 - **Text chat:** the backend runs an OpenAI agent (Responses API) that calls server-side tools over your records, so every amount comes from deterministic calculations, not the model. If OpenAI is not configured or fails, a rule-based English/Hindi/Hinglish assistant answers.
 - **Live voice:** the backend mints a short-lived OpenAI Realtime key; the browser connects over WebRTC, streams microphone audio, and forwards the model's tool calls to the same backend tools. You can interrupt at any time.
 - **Actions:** the assistant can only _propose_ reminders, alerts, or subscription workflows. Nothing is recorded until you confirm it under Actions.
 
-The demo identity and records are synthetic. All `/api/v1` routes return 503 in production because real authentication is not implemented yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/API.md](docs/API.md), [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+The demo identity and records are synthetic. All `/api/v1` routes return 503 in production because real authentication is not implemented yet. Accuracy controls and measured results: [docs/EVALUATION.md](docs/EVALUATION.md), [docs/SOURCES.md](docs/SOURCES.md), [docs/INTENTS.md](docs/INTENTS.md). Capacity assumptions (not load-tested): [docs/CAPACITY.md](docs/CAPACITY.md). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/API.md](docs/API.md), [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

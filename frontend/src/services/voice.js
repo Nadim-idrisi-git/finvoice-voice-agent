@@ -18,6 +18,7 @@ export class LiveVoiceSession {
   stream = null;
   audio = null;
   disposed = false;
+  lastUserTranscript = "";
 
   constructor(callbacks) {
     this.callbacks = callbacks;
@@ -91,7 +92,10 @@ export class LiveVoiceSession {
         this.transition("PROCESSING");
         break;
       case "conversation.item.input_audio_transcription.completed":
-        if (event.transcript?.trim()) this.callbacks.transcript("you", event.transcript.trim());
+        if (event.transcript?.trim()) {
+          this.lastUserTranscript = event.transcript.trim();
+          this.callbacks.transcript("you", this.lastUserTranscript);
+        }
         break;
       case "output_audio_buffer.started":
         this.transition("ASSISTANT_SPEAKING");
@@ -101,7 +105,10 @@ export class LiveVoiceSession {
         this.transition("LISTENING");
         break;
       case "response.output_audio_transcript.done":
-        if (event.transcript?.trim()) this.callbacks.transcript("assistant", event.transcript.trim());
+        if (event.transcript?.trim()) {
+          this.callbacks.transcript("assistant", event.transcript.trim());
+          void this.validateSpoken(event.transcript.trim());
+        }
         break;
       case "response.done":
         await this.runToolCalls(event.response?.output ?? []);
@@ -133,6 +140,30 @@ export class LiveVoiceSession {
       });
     }
     this.send({ type: "response.create" });
+  }
+
+  /** Checks a spoken answer against server-side tool results; asks the model to correct unsupported amounts. */
+  async validateSpoken(transcript) {
+    try {
+      const check = await api.validateVoice(transcript, this.lastUserTranscript);
+      if (check.ok || this.disposed) return;
+      const problems = [
+        check.unsupportedAmounts.length && `you said ${check.unsupportedAmounts.join(", ")}, which is not in any tool result`,
+        check.unsupportedSuccess && "you said something was done, but no action is confirmed",
+      ].filter(Boolean);
+      this.callbacks.transcript("assistant", "\u26a0\ufe0f Checking that again: I may have misstated something.");
+      this.send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "system",
+          content: [{ type: "input_text", text: `Validation failed: ${problems.join("; ")}. Briefly correct yourself using only tool values, or say you can't verify it.` }],
+        },
+      });
+      this.send({ type: "response.create" });
+    } catch {
+      // Validation is best-effort for voice; the text path validates before answering.
+    }
   }
 
   fail(message) {
