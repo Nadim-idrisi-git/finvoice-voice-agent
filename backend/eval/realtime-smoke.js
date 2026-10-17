@@ -42,6 +42,8 @@ ws.onmessage = async ({ data }) => {
   if (event.type !== "response.done") return;
   const output = event.response?.output ?? [];
   const calls = output.filter((item) => item.type === "function_call");
+  const spokenBeforeTools = output.filter((item) => item.type === "message").flatMap((item) => item.content ?? []).map((p) => p.text ?? p.transcript ?? "").join(" ").trim();
+  if (calls.length && spokenBeforeTools) console.log(`AGENT (before tool): ${spokenBeforeTools}`);
   if (calls.length) {
     for (const call of calls) {
       let result;
