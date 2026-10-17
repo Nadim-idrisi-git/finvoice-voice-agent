@@ -110,7 +110,7 @@ export function AssistantPanel({ assistant }) {
       {session && (
         <div className="mt-2 flex flex-wrap items-center gap-[13px] text-[9px] text-[#5a7865] sm:flex-nowrap">
           <span className="flex flex-1 basis-full items-center gap-[5px] sm:basis-auto">
-            <Icon name="AudioLines" size={15} /> Live call · speak anytime to interrupt (headphones work best)
+            <Icon name="AudioLines" size={15} /> Live conversation · speak anytime to interrupt
           </span>
           <button onClick={() => void stopVoice()} className="flex items-center gap-1 text-[#61736a]">
             <Icon name="X" size={14} /> End session
@@ -122,7 +122,7 @@ export function AssistantPanel({ assistant }) {
         <span className="flex items-center gap-1">
           <Icon name="ShieldCheck" size={13} /> Synthetic demo records only
         </span>
-        <span className="text-right">Voice by ElevenLabs; answers checked against your records before they are spoken.</span>
+        <span className="text-right">Live voice sends audio to OpenAI when configured. Verify important details.</span>
       </div>
     </section>
   );

@@ -9,7 +9,6 @@ export async function startApp(env = {}, deps = {}) {
   await once(server, "listening");
   const base = `http://127.0.0.1:${server.address().port}`;
   return {
-    base,
     async request(path, { method = "GET", body } = {}) {
       const response = await fetch(base + path, {
         method: body === undefined ? method : "POST",
@@ -26,14 +25,10 @@ export async function startApp(env = {}, deps = {}) {
 export function fakeFetch(...responses) {
   const calls = [];
   const fn = async (url, init) => {
-    let body = init?.body;
-    try {
-      body = typeof body === "string" ? JSON.parse(body) : body;
-    } catch {}
-    calls.push({ url, init, body });
+    calls.push({ url, init, body: JSON.parse(init.body) });
     const next = responses.shift();
     if (next instanceof Error) throw next;
-    return { ok: next?.ok ?? true, status: next?.status ?? 200, body: next?.stream, json: async () => next?.json ?? next };
+    return { ok: next?.ok ?? true, status: next?.status ?? 200, json: async () => next?.json ?? next };
   };
   fn.calls = calls;
   return fn;

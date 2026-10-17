@@ -14,7 +14,7 @@
 | Text messages | 0.5 per DAU per day | → 125,000/day, ~15/s at peak |
 | Backend requests at peak | ~500 sessions × 2 tool calls / 15 s turn ≈ 70 req/s, plus text ≈ 100 req/s | |
 
-Audio passes through the backend in both directions (utterance upload to ElevenLabs speech-to-text, streamed MP3 back), about 30–60 KB per utterance and ~16 KB/s of playback per active call. At ~500 concurrent calls that is roughly 8 MB/s of streamed audio, so speech endpoints need their own instances or a streaming-friendly proxy. Provider limits: ElevenLabs concurrency and character quota, and OpenAI rate limits.
+Audio does not pass through the backend (browser ↔ OpenAI over WebRTC), so backend load is tool calls and session minting; the main scaling limits are OpenAI Realtime concurrency/rate limits and cost per audio minute.
 
 ## What blocks horizontal scaling today
 

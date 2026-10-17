@@ -1,32 +1,19 @@
 # Voice architecture
 
-Provider: **ElevenLabs for voice only** (speech-to-text and text-to-speech). The answer itself comes from the backend OpenAI agent, so every spoken reply passes the same grounding tools and answer validator as text chat **before** it is spoken. See [ADR 0003](adr/0003-elevenlabs-voice.md).
+Provider: OpenAI Realtime API over WebRTC (see [ADR 0002](adr/0002-openai.md)).
 
-## Turn pipeline
+**Session setup.** The browser calls `POST /api/v1/voice/session`. The backend calls `POST https://api.openai.com/v1/realtime/client_secrets` with the long-lived key and a session config: `type: "realtime"`, `model` (`OPENAI_REALTIME_MODEL`, default `gpt-realtime-2.1`), `instructions`, the shared tool definitions, `audio.input.transcription.model` (`OPENAI_TRANSCRIBE_MODEL`), `audio.input.turn_detection: { type: "semantic_vad" }`, and `audio.output.voice` (`OPENAI_VOICE`, default `marin`). The secret expires after 10 minutes. Only the ephemeral `value` reaches the browser.
 
-1. **Listen.** The browser keeps the microphone open (echo cancellation, noise suppression) and runs voice-activity detection on an `AnalyserNode`: speech starts after ~120 ms above the level threshold and ends after ~900 ms of quiet. Each utterance is recorded with `MediaRecorder` (webm/opus).
-2. **Transcribe.** `POST /api/v1/voice/transcribe` (raw audio, ≤5 MB). The backend calls ElevenLabs `POST /v1/speech-to-text` with `model_id = ELEVENLABS_STT_MODEL` (default `scribe_v2`); the language (Hindi or English) is detected automatically.
-3. **Answer.** `POST /api/v1/assistant/message` with `channel: "voice"`: the OpenAI agent calls tools, the validator checks every amount and success claim, and the answer is shortened for speech. The response carries a `speechId`.
-4. **Speak.** The browser plays `GET /api/v1/voice/speech/:speechId`. The backend streams ElevenLabs `POST /v1/text-to-speech/{voice}/stream` (`ELEVENLABS_TTS_MODEL`, default `eleven_flash_v2_5`, MP3) straight through. Only answers this server produced can be spoken, and only to their owner.
-5. **Open the call.** On start the browser sends "The call has started." and the agent greets the user with the top findings.
+**Media.** The browser creates an `RTCPeerConnection`, adds the microphone track (echo cancellation, noise suppression, auto gain), creates the `oai-events` data channel, and posts its SDP offer to `https://api.openai.com/v1/realtime/calls` with `Authorization: Bearer <ephemeral key>`. Model audio arrives as a remote track played by an `<audio>` element. There is no client-side PCM encoding or playback queue.
 
-## Interruption
+**Events → UI state.** `input_audio_buffer.speech_started` → `USER_SPEAKING` (via `INTERRUPTED` if the assistant was speaking); `speech_stopped` → `PROCESSING`; `output_audio_buffer.started` → `ASSISTANT_SPEAKING`; `output_audio_buffer.stopped`/`cleared` → `LISTENING`. Transcripts come from `conversation.item.input_audio_transcription.completed` and `response.output_audio_transcript.done`. The state machine in `frontend/src/services/voiceState.js` rejects impossible jumps.
 
-While the assistant is speaking or thinking, sustained speech (~250 ms, higher threshold to ignore echo) stops playback immediately, increments a generation counter so any in-flight transcript/answer/audio from the old turn is discarded, and starts recording the new utterance. Stopping audio never undoes an action the backend already recorded. Headphones give the cleanest barge-in.
+**Interruption.** Over WebRTC the server tracks how much audio has played and truncates unplayed audio when the user starts speaking; the client does not need to cancel playback.
 
-## Fallbacks (Web Speech API)
+**Tools.** On `response.done`, every `function_call` output item is forwarded to `POST /api/v1/tools/:name`. The result is sent back with `conversation.item.create` (`type: "function_call_output"`, matching `call_id`), followed by one `response.create`. Action tools only create proposals; the UI shows a notice to confirm them.
 
-- If ElevenLabs text-to-speech fails (plan, quota, network), the browser reads the **same validated answer** with `speechSynthesis`.
-- If ElevenLabs speech-to-text is rejected, the call switches to the browser's `SpeechRecognition` (Chrome) for the rest of the session.
+**Teardown.** Ending the session closes the data channel and peer connection and stops microphone tracks. Connection loss shows an error; starting voice again mints a fresh key. Automatic resumption is not implemented.
 
-Fallbacks never change what is said, only who says it.
+Model names, event names, and voices change over time; they are configurable and must be verified against current OpenAI docs before release. Naturalness and Hindi/Hinglish quality remain unevaluated until tested with real audio (see `VOICE_EVALUATION.md`).
 
-## Configuration
-
-`ELEVENLABS_API_KEY` (needs **Text to Speech** and **Speech to Text** permissions, plus **Voices: read** if `ELEVENLABS_VOICE_ID` is empty), `ELEVENLABS_VOICE_ID` (empty = the account's first premade voice; Voice Library voices require a paid plan), `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_STT_MODEL`. The key never reaches the browser.
-
-## Not yet measured
-
-End-to-end turn latency (STT + agent ≈ 4 s p50 in text evaluation + TTS first byte), interruption latency, transcription accuracy for Hindi/Hinglish, and voice naturalness. These need live calls.
-
-References: [Speech to text API](https://elevenlabs.io/docs/api-reference/speech-to-text/convert), [Models](https://elevenlabs.io/docs/overview/models).
+References: [Realtime WebRTC](https://developers.openai.com/api/docs/guides/realtime-webrtc), [Realtime conversations](https://developers.openai.com/api/docs/guides/realtime-conversations), [Create client secret](https://developers.openai.com/api/reference/resources/realtime/subresources/client_secrets/methods/create).

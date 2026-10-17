@@ -40,10 +40,6 @@ export function loadConfig(env = process.env) {
     OPENAI_REALTIME_MODEL: text(env, "OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
     OPENAI_VOICE: text(env, "OPENAI_VOICE", "marin"),
     OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe"),
-    ELEVENLABS_API_KEY: text(env, "ELEVENLABS_API_KEY", undefined),
-    ELEVENLABS_VOICE_ID: text(env, "ELEVENLABS_VOICE_ID", undefined),
-    ELEVENLABS_TTS_MODEL: text(env, "ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5"),
-    ELEVENLABS_STT_MODEL: text(env, "ELEVENLABS_STT_MODEL", "scribe_v2"),
     ASSISTANT_RATE_LIMIT: positiveInt(env, "ASSISTANT_RATE_LIMIT", 20),
   };
 }

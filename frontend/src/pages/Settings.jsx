@@ -4,8 +4,8 @@ import { card, cardTitle } from "../lib/ui";
 
 const rows = [
   {
-    title: "Voice",
-    text: "ElevenLabs speech-to-text and voice, with the browser voice as a fallback. Every spoken answer is checked against your records first.",
+    title: "Live voice provider",
+    text: "OpenAI Realtime over WebRTC, with natural turn-taking and interruption. Requires an OpenAI API key on the backend.",
     end: <span className="rounded-[10px] bg-[#fff4e4] px-[7px] py-[5px] text-[8px] font-bold text-[#9a793f]">Optional</span>,
   },
   {

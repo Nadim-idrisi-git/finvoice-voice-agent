@@ -1,6 +1,6 @@
 import { outputText } from "./openai.js";
 import { executeTool, toolDefinitions } from "./tools.js";
-import { spokenInstructions, textInstructions } from "./prompts.js";
+import { textInstructions } from "./prompts.js";
 import { ABSTAIN_MESSAGE, validateAnswer } from "./validator.js";
 
 const MAX_TOOL_ROUNDS = 4;
@@ -12,9 +12,8 @@ const MAX_TOOL_ROUNDS = 4;
  * tool results. One corrective retry is allowed; otherwise the agent abstains.
  * Returns { answer, actionProposals, toolsUsed, validation, responseId }.
  */
-export async function runAgent({ message, ctx, openai, model, channel = "text", previousResponseId, evidenceCarryover = [], log }) {
-  const instructions = channel === "voice" ? spokenInstructions(ctx.user) : textInstructions(ctx.user);
-  const base = { model, instructions, tools: toolDefinitions };
+export async function runAgent({ message, ctx, openai, model, previousResponseId, evidenceCarryover = [], log }) {
+  const base = { model, instructions: textInstructions(ctx.user), tools: toolDefinitions };
   const actionProposals = [];
   const toolsUsed = [];
   // Evidence from the previous turn lets follow-ups ("and how much was that?") cite earlier tool results.
