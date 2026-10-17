@@ -4,6 +4,7 @@ import { api } from "./services/api";
 import { useAssistant } from "./hooks/useAssistant";
 import { Sidebar } from "./components/Sidebar";
 import { AssistantPanel } from "./components/AssistantPanel";
+import { VoiceHero } from "./components/VoiceHero";
 import { ReminderModal } from "./components/ReminderModal";
 import { Overview } from "./pages/Overview";
 import { Analytics } from "./pages/Analytics";
@@ -144,6 +145,7 @@ export default function App() {
               </button>
             </div>
           )}
+          {active === "Overview" && <VoiceHero assistant={assistant} findings={dashboard?.briefing?.topFindings ?? []} />}
           {active === "Overview" && (
             <Overview
               dashboard={dashboard}

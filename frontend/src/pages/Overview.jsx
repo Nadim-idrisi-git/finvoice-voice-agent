@@ -1,5 +1,4 @@
 import { Icon } from "../components/Icon";
-import { PageHeading } from "../components/PageHeading";
 import { categoryEmoji, chartSeries, colors, donutGradient } from "../lib/chart";
 import { formatRupees as money } from "../lib/format";
 import { billTones, card, cardSubtitle, cardTitle, categoryTones, outlineBtn } from "../lib/ui";
@@ -8,22 +7,21 @@ const arrowLink = "border-0 bg-transparent p-0.5 text-[9px] font-semibold text-[
 
 export function Overview({ dashboard, categories, total, change, loading, onAsk, onReminder }) {
   const graph = chartSeries(dashboard?.dailySpending ?? [], dashboard?.month ?? new Date().toISOString().slice(0, 7));
-  const findings = dashboard?.briefing?.topFindings ?? [];
   const top = categories[0];
   const changeTone = change > 0 ? "bg-[#fff1eb] text-[#b25b3d]" : change < 0 ? "bg-[#edf7f0] text-[#35835c]" : "bg-[#f0f1ee] text-[#6b7068]";
 
   return (
     <>
-      <PageHeading
-        title="Hi Vivek, here’s your week"
-        subtitle="Here’s your money at a glance. Your demo data is synthetic."
-        action={
-          <button className={`${outlineBtn} p-2 sm:px-3 sm:py-[9px]`} onClick={onReminder} aria-label="Set a reminder">
-            <Icon name="Bell" size={15} />
-            <span className="hidden text-[10px] sm:inline">Set a reminder</span>
-          </button>
-        }
-      />
+      <div className="mt-7 mb-3 flex items-end justify-between">
+        <div>
+          <div className="text-[8px] font-bold tracking-[1px] text-[#559270]">YOUR MONEY AT A GLANCE</div>
+          <h2 className="mt-1 font-display text-[15px] font-bold">The numbers behind the call</h2>
+        </div>
+        <button className={`${outlineBtn} p-2 sm:px-3 sm:py-[7px]`} onClick={onReminder} aria-label="Set a reminder">
+          <Icon name="Bell" size={14} />
+          <span className="hidden text-[10px] sm:inline">Set a reminder</span>
+        </button>
+      </div>
       <div className="grid grid-cols-1 gap-[11px] xs:gap-3.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(225px,1fr)] md:grid-cols-[minmax(0,1.65fr)_minmax(250px,1fr)] xl:grid-cols-[minmax(0,1.8fr)_minmax(290px,1fr)] xl:gap-[17px]">
         <div className="flex flex-col gap-[11px] xs:gap-3.5 xl:gap-[17px]">
           {/* Total spending */}
@@ -124,39 +122,6 @@ export function Overview({ dashboard, categories, total, change, loading, onAsk,
         </div>
 
         <div className="grid grid-cols-1 gap-[11px] xs:grid-cols-2 xs:gap-3.5 sm:flex sm:flex-col xl:gap-[17px]">
-          {/* Insight: this week's findings from the data */}
-          <div className="relative overflow-hidden rounded-[10px] border border-[#e1efe4] bg-[#e9f4eb] p-[17px] xs:col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-1.5 text-[8px] font-bold tracking-[0.8px] text-[#548564]">
-              <span className="grid size-[21px] place-items-center rounded-md bg-[#d7ebdc]">
-                <Icon name="Sparkles" size={14} />
-              </span>
-              THIS WEEK’S MONEY CALL
-            </div>
-            {findings.length ? (
-              <ol className="mt-3 grid gap-2.5">
-                {findings.map((f, i) => (
-                  <li key={f.title} className="flex gap-2">
-                    <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-white text-[9px] font-bold text-[#347650]">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="font-display text-[11px] leading-snug font-bold">{f.title}</p>
-                      <p className="mt-0.5 text-[9px] leading-[1.5] text-[#687b6e]">{f.whyItMatters}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-3 text-[9px] text-[#687b6e]">Load the event dataset to see this week’s findings.</p>
-            )}
-            <button
-              className="relative z-[1] mt-3 text-[9px] font-bold text-[#347650]"
-              onClick={() => onAsk("What should I know about my money this week?")}
-            >
-              Ask about these <span className="pl-[5px]">→</span>
-            </button>
-          </div>
-
           {/* Coming up */}
           <div className={`${card} min-h-[200px] px-4 py-[15px] sm:min-h-[211px] xl:min-h-[224px]`}>
             <div className="flex items-start justify-between">

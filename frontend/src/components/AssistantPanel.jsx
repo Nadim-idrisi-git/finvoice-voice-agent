@@ -29,11 +29,11 @@ export function AssistantPanel({ assistant }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className={`${kicker} mb-[7px]`}>
-            <Icon name="Sparkles" size={14} /> YOUR FINANCIAL COPILOT
+            <Icon name="Sparkles" size={14} /> PREFER TYPING?
           </div>
-          <h2 className="m-0 font-display text-base font-bold tracking-[-0.5px] xs:text-[17px]">Let’s talk money.</h2>
+          <h2 className="m-0 font-display text-base font-bold tracking-[-0.5px] xs:text-[17px]">Chat with Finvoice</h2>
           <p className="mt-1 max-w-[250px] text-[9px] text-muted xs:max-w-none">
-            Ask a question or start a voice conversation. I’ll use your synthetic demo data.
+            Same agent, same checked numbers, by text.
           </p>
         </div>
         <div className="flex items-center gap-1.5 pt-1.5 text-[9px] text-[#748079]">
