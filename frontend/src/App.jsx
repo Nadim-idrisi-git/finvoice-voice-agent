@@ -6,6 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import { AssistantPanel } from "./components/AssistantPanel";
 import { VoiceHero } from "./components/VoiceHero";
 import { ReminderModal } from "./components/ReminderModal";
+import { NotificationsMenu } from "./components/NotificationsMenu";
 import { Overview } from "./pages/Overview";
 import { Analytics } from "./pages/Analytics";
 import { Subscriptions } from "./pages/Subscriptions";
@@ -121,10 +122,7 @@ export default function App() {
             <button className="p-[3px] text-[#79847e] xs:p-[5px]" aria-label="Search">
               <Icon name="Search" size={18} />
             </button>
-            <button className="relative p-[3px] text-[#79847e] xs:p-[5px]" aria-label="Notifications">
-              <Icon name="Bell" size={18} />
-              <i className="absolute top-1 right-1 size-1.5 rounded-full bg-[#55b581]" />
-            </button>
+            <NotificationsMenu dashboard={dashboard} actions={actions} onOpenPage={setActive} />
             <div className="grid size-[27px] place-items-center rounded-full bg-[#eadcc8] text-[9px] font-bold text-[#765a3a] xs:size-8 xs:text-[11px]">
               VG
             </div>
