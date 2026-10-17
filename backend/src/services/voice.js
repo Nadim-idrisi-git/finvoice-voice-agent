@@ -4,7 +4,7 @@ import { voiceInstructions } from "./prompts.js";
 
 const SESSION_SECONDS = 600;
 const TRANSCRIPTION_HINT =
-  "Hinglish phone call about personal finance. Hindi and English are mixed. Words: IDFC First Bank, PNB, HDFC, Bajaj Finance, Trusave Fintech, Bachatt, Kreditbee, Torrent Gas, LIC, EMI, autopay, mandate, NACH, bounce, charge, refund, reversal, balance, minimum balance, kitna, kitni baar, kata, kaata, paisa, rupaye, haan, nahi, theek hai, draft karo, confirm karo.";
+  "Hinglish phone call about personal finance. Hindi and English are mixed. Account endings are four digits: 4091, 7350, 9380, 3175, 2750, 2145. Words: IDFC First Bank, PNB, HDFC, Bajaj Finance, Trusave Fintech, Bachatt, Kreditbee, Torrent Gas, LIC, EMI, autopay, mandate, NACH, bounce, charge, refund, reversal, balance, minimum balance, kitna, kitni baar, kata, kaata, paisa, rupaye, haan, nahi, theek hai, draft karo, confirm karo.";
 
 /**
  * Mints a short-lived Realtime client secret locked to this session's model, voice,
