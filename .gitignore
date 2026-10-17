@@ -8,3 +8,5 @@ coverage/
 *.log
 **/eval/results/
 backend/data/raw/
+tmp/
+output/

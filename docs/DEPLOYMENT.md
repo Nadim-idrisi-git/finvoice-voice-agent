@@ -6,4 +6,6 @@
 
 Keep secrets in provider settings, never in the repository. CORS allows only `WEB_ORIGIN`. Configure MongoDB Atlas network access narrowly.
 
-The backend deliberately returns HTTP 503 for `/api/v1/*` when `NODE_ENV=production`, because real authentication and durable user-scoped storage are not implemented. Remove that guard only after both exist and are reviewed. Roll back by redeploying the previous frontend and backend builds. No deployment has been performed or verified.
+In production, `/api/v1/*` returns HTTP 503 unless `DEMO_MODE=true`. `render.yaml` sets `DEMO_MODE=true` so the deployed app serves the synthetic demo user (no real users or bank data). Real authentication and user-scoped storage are not implemented; never turn on demo mode with real data. With `MONGODB_URI` set, actions, reminders, alerts, and audit entries persist in MongoDB; if the database is unreachable the backend falls back to in-memory storage, which `/health` reports.
+
+Roll back by redeploying the previous frontend and backend builds.

@@ -23,9 +23,9 @@
 
 ## Required before real users
 
-- Implement and review real authentication, session/CSRF protections, authorization, and durable owner-scoped repositories. Production API routes currently fail closed with HTTP 503; demo data and actions are in process memory.
+- Implement and review real authentication, session/CSRF protections, authorization, and durable owner-scoped repositories. Production API routes fail closed with HTTP 503 unless `DEMO_MODE=true`, which serves only the synthetic demo user. Actions persist in MongoDB when `MONGODB_URI` is set, otherwise in process memory.
 - Configure an OpenAI API key and test the agent's answers and real browser audio sessions, Hindi/Hinglish quality, interruptions, latency, and supported devices. Live voice was not exercised without credentials.
 - Complete privacy, retention/deletion, threat, abuse, operational, and financial-domain reviews. Do not connect real bank data in this demo.
-- Deploy and verify environments, CORS, secrets, monitoring, backups, and rollback. No deployment has been performed.
+- Verify the deployed environments, CORS, secrets, monitoring, backups, and rollback. Render and Vercel configuration is in place; see `DEPLOYMENT.md`.
 
 This is a locally verified synthetic-data MVP, not a production-ready financial service.
