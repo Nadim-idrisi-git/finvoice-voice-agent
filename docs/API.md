@@ -22,7 +22,7 @@ Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /hea
 
 `source` is `openai` when the agent answered and `rules` for the fallback (which also returns `intent` and `data`). Rate limited to 20/minute.
 
-**Voice:** `POST /voice/session` returns `{ clientSecret, expiresAt, model, voice, callsUrl }` for a browser WebRTC call to OpenAI Realtime (503 without `OPENAI_API_KEY`; 3/minute). `POST /tools/:name` with `{ args }` runs one registered tool and returns `{ result, proposesAction }`; unknown tools return 404 and invalid arguments 400. Results add a formatted INR string beside every amount (`totalPaise` → `totalRupees`). Action tools only create proposals.
+**Voice (ElevenLabs):** `GET /voice/status` → `{ configured, provider }`. `POST /voice/transcribe` with raw audio (`audio/webm`, ≤5 MB) → `{ text, languageCode, languageProbability }` via ElevenLabs Scribe. `POST /assistant/message` with `channel: "voice"` returns a spoken-style, validated answer plus a `speechId`; `GET /voice/speech/:speechId` streams that answer as `audio/mpeg` from ElevenLabs (owner-only; unknown ids return 404). `POST /tools/:name` with `{ args, callId? }` runs one registered tool and returns `{ result, proposesAction }` (idempotent per `callId`; unknown tools 404, invalid arguments 400). Results add a formatted INR string beside every amount. Action tools only create proposals.
 
 Tools: `get_spending_summary`, `get_category_breakdown`, `compare_monthly_spending`, `find_recurring_subscriptions`, `get_upcoming_bills`, `get_emi_schedule`, `get_unusual_spending`, `create_reminder`, `configure_spending_alert`, `prepare_subscription_action`.
 

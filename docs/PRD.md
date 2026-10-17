@@ -6,7 +6,7 @@ Give one local demo user a responsive, voice-first way to ask about synthetic IN
 
 ## Users and workflows
 
-- Ask questions in English, Hindi, or Hinglish by text; an OpenAI agent answers using tools over the records, with a rule-based fallback; optional OpenAI Realtime live voice when a key is configured.
+- Ask questions in English, Hindi, or Hinglish by text; an OpenAI agent answers using tools over the records, with a rule-based fallback; live voice through ElevenLabs (speech-to-text and voice) with every answer validated before it is spoken.
 - Review monthly totals, categories, recurring-payment candidates, upcoming bills, EMI dates, and unusual-spend candidates.
 - Propose and confirm reminders or spending alerts; inspect the resulting action history.
 - Switch to text when voice is unavailable.

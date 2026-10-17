@@ -2,7 +2,7 @@
 
 ## Local verification
 
-- Tests: passed (37 backend, 5 frontend) with Node's built-in test runner. OpenAI is replaced by a fake fetch, so the agent tool loop, fallback, and Realtime session minting are tested without network access.
+- Tests: passed (46 backend, 5 frontend) with Node's built-in test runner. OpenAI and ElevenLabs are replaced by a fake fetch, so the agent loop, validator, fallback, transcription, and speech streaming are tested without network access.
 - Backend syntax check and frontend production build: passed.
 - Rendered UI checked at 1440px, 900px, and 390px widths.
 - Dependency audit: 0 vulnerabilities in both apps.
@@ -18,7 +18,7 @@
 
 - Responsive finance dashboard, transaction and analytics views, deterministic text assistant, and confirmation-gated demo actions.
 - OpenAI text agent with server-side tool calling and a rule-based fallback.
-- Optional OpenAI Realtime voice over WebRTC with a short-lived server-issued key and explicit UI state handling.
+- ElevenLabs voice (speech-to-text and text-to-speech) with answers validated before they are spoken, interruption handling, and Web Speech API fallbacks.
 - Synthetic INR data, request validation, local docs, starter Render/Vercel configuration, and CI workflow.
 
 ## Required before real users
