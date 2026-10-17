@@ -20,7 +20,7 @@ export async function createVoiceSession({ config, user, openai }) {
     session: {
       type: "realtime",
       model: config.OPENAI_REALTIME_MODEL,
-      instructions: voiceInstructions(user),
+      instructions: voiceInstructions(user, config.OPENAI_VOICE),
       tools: toolDefinitions,
       tool_choice: "auto",
       audio: {

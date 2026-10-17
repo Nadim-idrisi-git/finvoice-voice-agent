@@ -28,7 +28,7 @@ let lastUser = "";
 ws.onopen = () => {
   send({
     type: "session.update",
-    session: { type: "realtime", instructions: voiceInstructions(ctx.user), tools: toolDefinitions, tool_choice: "auto", output_modalities: ["text"] },
+    session: { type: "realtime", instructions: voiceInstructions(ctx.user, config.OPENAI_VOICE), tools: toolDefinitions, tool_choice: "auto", output_modalities: ["text"] },
   });
   send({ type: "response.create" }); // the agent opens the call, as in the browser
 };
