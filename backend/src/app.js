@@ -36,7 +36,16 @@ export function createApp({
 
   app.disable("x-powered-by");
   app.use(securityHeaders);
-  app.use(cors({ origin: config.WEB_ORIGIN, methods: ["GET", "POST"] }));
+  // Production allows only WEB_ORIGIN. In development any localhost port is allowed,
+  // because Vite moves to the next free port when 5173 is taken.
+  const localhost = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+  app.use(
+    cors({
+      origin: (origin, done) =>
+        done(null, !origin || origin === config.WEB_ORIGIN || (config.NODE_ENV !== "production" && localhost.test(origin))),
+      methods: ["GET", "POST"],
+    }),
+  );
   app.use(express.json({ limit: "24kb" }));
   app.use(requestLog(log));
   app.use(rateLimit({ limit: 60 }));
