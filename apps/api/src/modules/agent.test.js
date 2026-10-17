@@ -10,7 +10,10 @@ describe("grounded assistant intent routing", () => {
     expect(hinglish.answer).toContain("Is mahine");
   });
   it("answers Hindi script and food category queries", () => {
-    const answer = answerFinancialQuestion("\u0916\u093E\u0928\u0947 \u092A\u0930 \u0915\u093F\u0924\u0928\u093E \u0916\u0930\u094D\u091A \u0939\u0941\u0906?", records);
+    const answer = answerFinancialQuestion(
+      "\u0916\u093E\u0928\u0947 \u092A\u0930 \u0915\u093F\u0924\u0928\u093E \u0916\u0930\u094D\u091A \u0939\u0941\u0906?",
+      records,
+    );
     expect(answer.intent).toBe("category");
     expect(answer.data).toHaveProperty("amountPaise");
   });
@@ -35,7 +38,9 @@ describe("grounded assistant intent routing", () => {
     const answer = answerFinancialQuestion("Break down my spending by category", records);
     expect(answer.intent).toBe("category_breakdown");
     expect(answer.data.categories.length).toBeGreaterThan(1);
-    expect(answer.data.totalPaise).toBe(answerFinancialQuestion("How much did I spend this month?", records).data.amountPaise);
+    expect(answer.data.totalPaise).toBe(
+      answerFinancialQuestion("How much did I spend this month?", records).data.amountPaise,
+    );
   });
   it("answers income questions", () => {
     const answer = answerFinancialQuestion("Show me my income", records);

@@ -12,7 +12,9 @@ describe("versioned API", () => {
     expect(response.body.transactions.length).toBeGreaterThan(0);
   });
   it("grounds assistant totals in paise records and validates input", async () => {
-    const good = await request(app).post("/api/v1/assistant/message").send({ message: "How much did I spend this month?" });
+    const good = await request(app)
+      .post("/api/v1/assistant/message")
+      .send({ message: "How much did I spend this month?" });
     expect(good.status).toBe(200);
     expect(good.body.data.amountPaise).toBeGreaterThan(0);
     expect(good.body.answer).toContain("\u20B9");
@@ -20,14 +22,20 @@ describe("versioned API", () => {
     expect(bad.status).toBe(400);
   });
   it("requires confirmation and executes one in-app reminder idempotently", async () => {
-    const proposed = await request(app).post("/api/v1/actions").send({ type: "reminder", title: "Bill reminder", details: "Remind me before the next bill due date." });
+    const proposed = await request(app)
+      .post("/api/v1/actions")
+      .send({ type: "reminder", title: "Bill reminder", details: "Remind me before the next bill due date." });
     expect(proposed.status).toBe(201);
     expect(proposed.body.status).toBe("AWAITING_CONFIRMATION");
     const unconfirmed = await request(app).post(`/api/v1/actions/${proposed.body.id}/confirm`).send({});
     expect(unconfirmed.status).toBe(400);
-    const confirmed = await request(app).post(`/api/v1/actions/${proposed.body.id}/confirm`).send({ confirmation: true });
+    const confirmed = await request(app)
+      .post(`/api/v1/actions/${proposed.body.id}/confirm`)
+      .send({ confirmation: true });
     expect(confirmed.body.status).toBe("SUCCEEDED");
-    const duplicate = await request(app).post(`/api/v1/actions/${proposed.body.id}/confirm`).send({ confirmation: true });
+    const duplicate = await request(app)
+      .post(`/api/v1/actions/${proposed.body.id}/confirm`)
+      .send({ confirmation: true });
     expect(duplicate.body.status).toBe("SUCCEEDED");
     const reminders = await request(app).get("/api/v1/reminders");
     expect(reminders.body.some((r) => r.title === "Bill reminder")).toBe(true);

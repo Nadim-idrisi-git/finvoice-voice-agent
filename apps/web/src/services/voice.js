@@ -1,16 +1,44 @@
 import { api } from "./api";
-const actionTools = /* @__PURE__ */ new Set(["create_reminder", "configure_spending_alert", "prepare_subscription_action"]);
+const actionTools = /* @__PURE__ */ new Set([
+  "create_reminder",
+  "configure_spending_alert",
+  "prepare_subscription_action",
+]);
 const transitions = {
   IDLE: ["CONNECTING", "DISCONNECTED"],
   CONNECTING: ["LISTENING", "ERROR", "DISCONNECTED", "RECONNECTING"],
-  LISTENING: ["USER_SPEAKING", "PROCESSING", "ASSISTANT_SPEAKING", "INTERRUPTED", "ERROR", "DISCONNECTED", "RECONNECTING"],
-  USER_SPEAKING: ["PROCESSING", "INTERRUPTED", "LISTENING", "ASSISTANT_SPEAKING", "ERROR", "DISCONNECTED", "RECONNECTING"],
-  PROCESSING: ["USER_SPEAKING", "ASSISTANT_SPEAKING", "LISTENING", "INTERRUPTED", "ERROR", "DISCONNECTED", "RECONNECTING"],
+  LISTENING: [
+    "USER_SPEAKING",
+    "PROCESSING",
+    "ASSISTANT_SPEAKING",
+    "INTERRUPTED",
+    "ERROR",
+    "DISCONNECTED",
+    "RECONNECTING",
+  ],
+  USER_SPEAKING: [
+    "PROCESSING",
+    "INTERRUPTED",
+    "LISTENING",
+    "ASSISTANT_SPEAKING",
+    "ERROR",
+    "DISCONNECTED",
+    "RECONNECTING",
+  ],
+  PROCESSING: [
+    "USER_SPEAKING",
+    "ASSISTANT_SPEAKING",
+    "LISTENING",
+    "INTERRUPTED",
+    "ERROR",
+    "DISCONNECTED",
+    "RECONNECTING",
+  ],
   ASSISTANT_SPEAKING: ["INTERRUPTED", "LISTENING", "PROCESSING", "ERROR", "DISCONNECTED", "RECONNECTING"],
   INTERRUPTED: ["LISTENING", "PROCESSING", "ERROR", "DISCONNECTED"],
   RECONNECTING: ["CONNECTING", "LISTENING", "ERROR", "DISCONNECTED"],
   ERROR: ["CONNECTING", "IDLE", "DISCONNECTED"],
-  DISCONNECTED: ["CONNECTING", "IDLE", "ERROR"]
+  DISCONNECTED: ["CONNECTING", "IDLE", "ERROR"],
 };
 class VoiceSessionStateMachine {
   value = "IDLE";
@@ -51,19 +79,38 @@ class LiveVoiceSession {
       const config = await api.voiceSession();
       const { GoogleGenAI, Modality } = await import("@google/genai");
       this.toolNames = new Set((config.tools ?? []).map((t) => t.name));
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false,
+      });
       this.context = new AudioContext();
       await this.context.audioWorklet.addModule("/pcm-worklet.js");
       const ai = new GoogleGenAI({ apiKey: config.token, httpOptions: { apiVersion: "v1alpha" } });
-      this.session = await ai.live.connect({ model: config.model, config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: config.voice } } }, systemInstruction: config.systemInstruction, inputAudioTranscription: {}, outputAudioTranscription: {}, sessionResumption: {}, tools: [{ functionDeclarations: config.tools ?? [] }] }, callbacks: { onmessage: (message) => {
-        void this.onMessage(message);
-      }, onerror: (event) => {
-        this.transition("ERROR");
-        this.callbacks.error(event.message || "Voice connection error.");
-        void this.release();
-      }, onclose: () => {
-        if (!this.disposed) this.transition("DISCONNECTED");
-      } } });
+      this.session = await ai.live.connect({
+        model: config.model,
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: config.voice } } },
+          systemInstruction: config.systemInstruction,
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          sessionResumption: {},
+          tools: [{ functionDeclarations: config.tools ?? [] }],
+        },
+        callbacks: {
+          onmessage: (message) => {
+            void this.onMessage(message);
+          },
+          onerror: (event) => {
+            this.transition("ERROR");
+            this.callbacks.error(event.message || "Voice connection error.");
+            void this.release();
+          },
+          onclose: () => {
+            if (!this.disposed) this.transition("DISCONNECTED");
+          },
+        },
+      });
       this.source = this.context.createMediaStreamSource(this.stream);
       this.processor = new AudioWorkletNode(this.context, "pcm-capture");
       this.processor.port.onmessage = (event) => {
@@ -79,7 +126,10 @@ class LiveVoiceSession {
       this.processor.connect(this.context.destination);
       this.transition("LISTENING");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not start voice. Check microphone permission and provider setup.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not start voice. Check microphone permission and provider setup.";
       this.transition("ERROR");
       this.callbacks.error(message);
       await this.release();
@@ -105,9 +155,13 @@ class LiveVoiceSession {
       this.callbacks.transcript("you", server.inputTranscription.text);
       this.transition("PROCESSING");
     }
-    if (server?.outputTranscription?.text && !this.ignoreAssistantOutput) this.callbacks.transcript("assistant", server.outputTranscription.text);
+    if (server?.outputTranscription?.text && !this.ignoreAssistantOutput)
+      this.callbacks.transcript("assistant", server.outputTranscription.text);
     if (server?.turnComplete) this.modelTurnComplete = true;
-    const calls = event.toolCall?.functionCalls ?? server?.modelTurn?.parts?.flatMap((p) => p.functionCall ? [p.functionCall] : []) ?? [];
+    const calls =
+      event.toolCall?.functionCalls ??
+      server?.modelTurn?.parts?.flatMap((p) => (p.functionCall ? [p.functionCall] : [])) ??
+      [];
     if (calls.length) {
       this.transition("PROCESSING");
       for (const call of calls) {
@@ -116,13 +170,23 @@ class LiveVoiceSession {
           const result = await this.runTool(call.name, call.args ?? {});
           if (current !== this.generation || this.disposed) return;
           if (actionTools.has(call.name)) this.callbacks.actionProposed?.();
-          this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: { result } }] });
+          this.session?.sendToolResponse({
+            functionResponses: [{ id: call.id, name: call.name, response: { result } }],
+          });
         } catch {
-          this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: { error: "Tool unavailable. Please try again." } }] });
+          this.session?.sendToolResponse({
+            functionResponses: [
+              { id: call.id, name: call.name, response: { error: "Tool unavailable. Please try again." } },
+            ],
+          });
         }
       }
     }
-    const audio = this.ignoreAssistantOutput ? [] : server?.modelTurn?.parts?.flatMap((p) => p.inlineData?.data ? [{ data: p.inlineData.data, mimeType: p.inlineData.mimeType }] : []) ?? [];
+    const audio = this.ignoreAssistantOutput
+      ? []
+      : (server?.modelTurn?.parts?.flatMap((p) =>
+          p.inlineData?.data ? [{ data: p.inlineData.data, mimeType: p.inlineData.mimeType }] : [],
+        ) ?? []);
     if (audio.length) {
       this.transition("ASSISTANT_SPEAKING");
       for (const chunk of audio) {
@@ -130,13 +194,40 @@ class LiveVoiceSession {
         await this.play(chunk.data, chunk.mimeType);
       }
     }
-    if (current === this.generation && !this.disposed && this.modelTurnComplete && this.playing.size === 0) this.transition("LISTENING");
+    if (current === this.generation && !this.disposed && this.modelTurnComplete && this.playing.size === 0)
+      this.transition("LISTENING");
   }
   async runTool(name, args) {
     const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4100/api/v1";
-    const path = { get_spending_summary: "/analytics/summary", get_category_breakdown: "/analytics/categories", compare_monthly_spending: "/analytics/compare", find_recurring_subscriptions: "/subscriptions", get_upcoming_bills: "/bills", get_emi_schedule: "/emis", get_unusual_spending: "/analytics/unusual" };
+    const path = {
+      get_spending_summary: "/analytics/summary",
+      get_category_breakdown: "/analytics/categories",
+      compare_monthly_spending: "/analytics/compare",
+      find_recurring_subscriptions: "/subscriptions",
+      get_upcoming_bills: "/bills",
+      get_emi_schedule: "/emis",
+      get_unusual_spending: "/analytics/unusual",
+    };
     const isAction = actionTools.has(name);
-    const response = await fetch(`${apiUrl}${isAction ? "/actions" : path[name]}`, isAction ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: name === "create_reminder" ? "reminder" : name === "configure_spending_alert" ? "spending_alert" : "subscription_workflow", title: typeof args.title === "string" ? args.title.slice(0, 100) : "Assistant proposal", details: typeof args.details === "string" ? args.details.slice(0, 500) : "Review this proposed action." }) } : void 0);
+    const response = await fetch(
+      `${apiUrl}${isAction ? "/actions" : path[name]}`,
+      isAction
+        ? {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type:
+                name === "create_reminder"
+                  ? "reminder"
+                  : name === "configure_spending_alert"
+                    ? "spending_alert"
+                    : "subscription_workflow",
+              title: typeof args.title === "string" ? args.title.slice(0, 100) : "Assistant proposal",
+              details: typeof args.details === "string" ? args.details.slice(0, 500) : "Review this proposed action.",
+            }),
+          }
+        : void 0,
+    );
     if (!response.ok) throw new Error("Tool failed");
     return response.json();
   }
@@ -167,8 +258,7 @@ class LiveVoiceSession {
     for (const source of this.playing) {
       try {
         source.stop();
-      } catch {
-      }
+      } catch {}
     }
     this.playing.clear();
     this.nextPlaybackTime = this.context?.currentTime ?? 0;
@@ -181,8 +271,7 @@ class LiveVoiceSession {
     this.source?.disconnect();
     this.stream?.getTracks().forEach((t) => t.stop());
     this.session?.close();
-    await this.context?.close().catch(() => {
-    });
+    await this.context?.close().catch(() => {});
     this.session = null;
     this.processor = null;
     this.source = null;
@@ -194,7 +283,4 @@ class LiveVoiceSession {
     this.transition("DISCONNECTED");
   }
 }
-export {
-  LiveVoiceSession,
-  VoiceSessionStateMachine
-};
+export { LiveVoiceSession, VoiceSessionStateMachine };
