@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Finvoice Capabilities and Demo Questions</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm; }
+  :root { --ink:#17221f; --muted:#5f6f66; --brand:#24744c; --mint:#eaf5ee; --line:#dfe8e2; --amber:#fff4e4; --rose:#fdeeee; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, "Kohinoor Devanagari", sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.42; margin: 0; }
+  h1 { font-size: 24pt; margin: 0 0 4pt; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 14pt 0 6pt; color: var(--brand); }
+  h3 { font-size: 11pt; margin: 10pt 0 4pt; }
+  p { margin: 0 0 5pt; }
+  .kicker { font-size: 8pt; font-weight: 700; letter-spacing: 1.2pt; color: #3f8a62; text-transform: uppercase; margin-bottom: 4pt; }
+  .lead { font-size: 11.5pt; color: var(--muted); }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 8pt; font-size: 9.2pt; }
+  th, td { text-align: left; vertical-align: top; padding: 4.5pt 6pt; border-bottom: 1px solid var(--line); }
+  th { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .8pt; color: var(--muted); background: #f6faf7; }
+  td.n { width: 18pt; color: var(--brand); font-weight: 700; }
+  .ask { font-style: italic; color: #1f5a3c; font-weight: 600; }
+  .box { border: 1px solid var(--line); border-radius: 7pt; padding: 8pt 10pt; margin: 6pt 0; break-inside: avoid; }
+  .mint { background: var(--mint); border-color: #cfe6d7; }
+  .amber { background: var(--amber); border-color: #f0dfc0; }
+  .rose { background: var(--rose); border-color: #f1d0cf; }
+  .tag { display:inline-block; font-size: 7.5pt; font-weight: 700; padding: 1pt 6pt; border-radius: 10pt; background: var(--mint); color: #2f6b4c; margin-right: 3pt; }
+  .tag.safe { background: #eef1fb; color: #3d4f8f; }
+  .tag.must { background: #fff1d6; color: #8a5a00; }
+  ul { margin: 2pt 0 6pt 15pt; padding: 0; }
+  li { margin: 1.5pt 0; }
+  .small { font-size: 8.3pt; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; }
+  .prob { border: 1px solid var(--line); border-radius: 7pt; padding: 8pt 10pt; break-inside: avoid; }
+  .prob b.t { display:block; font-size: 10.5pt; margin-bottom: 2pt; }
+  .prob .num { color: var(--brand); font-weight: 800; }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div class="kicker">Finvoice · what she can do today · based on the live code and Vivek Gupta's event data (records up to 15 Oct 2026)</div>
+  <h1>What Finvoice can do right now</h1>
+  <p class="lead">A voice agent in Hinglish, Hindi and English that reads one person's bank SMS, emails, insurance, investment and loan records, finds problems he didn't know about, and prepares the fix, saving it only after he says "haan".</p>
+
+  <h2>1. Capabilities (every one is backed by a tool over real records)</h2>
+  <table>
+    <tr><th>#</th><th>She can…</th><th>What she uses / what you'll hear</th></tr>
+    <tr><td class="n">1</td><td><b>Run the weekly money call</b>: greet, then name the 3 most important findings</td><td>Duplicate IDFC fee · ₹5 lakh health cover off · bounced PNB autopays</td></tr>
+    <tr><td class="n">2</td><td><b>Find bank charges and duplicate fees</b></td><td>₹590 charged 5 times on 8 Oct (₹2,360 duplicate); ₹119.67 NACH bounce charge; IDFC min-balance fees ₹2,950</td></tr>
+    <tr><td class="n">3</td><td><b>Tell balances</b> for all 6 accounts, with the date</td><td>IDFC 2145 ₹3,994.90 (14 Oct) · PNB 3175 ₹24,757.29 · PNB 9380 ₹5,564.36 · PNB 2750 ₹5,286.50 · HDFC 7350 ₹14,261.39 · HDFC 4091 ₹5,778.83</td></tr>
+    <tr><td class="n">4</td><td><b>Explain who auto-debits him</b> (mandates, UPI autopay, SIPs)</td><td>Bachatt ~17×/week (₹24,998 in 30 days), Trusave Fintech ~12×/week, Kreditbee, Bajaj Finance EMI, Groww, Jar Gold, ₹151 daily SIP</td></tr>
+    <tr><td class="n">5</td><td><b>Spot bouncing autopays</b> and link them to the cause</td><td>2 bounces on PNB 9380 since 7 Oct; Trusave pulls from that same account</td></tr>
+    <tr><td class="n">6</td><td><b>Summarise spending</b> (month total, categories, vs last month)</td><td>Oct total ₹3,62,984.56 (+2.6% vs Sept), top: savings &amp; investments ₹1,14,835, cash ₹1,05,054.28*</td></tr>
+    <tr><td class="n">7</td><td><b>Search transactions</b> by merchant/bank/keyword</td><td>e.g. "ATM": 18 matches, ₹1,10,189.98 withdrawn</td></tr>
+    <tr><td class="n">8</td><td><b>Show bills</b> from biller reminders</td><td>Torrent Gas ₹2,030 (was due 3 Oct), LIC ₹4,677 (28 Sept), JioHome ₹440.43 (4 Sept)</td></tr>
+    <tr><td class="n">9</td><td><b>Insurance companion: find the policy</b></td><td>Care Health base cover ₹5,00,000, 1 adult; cancelled 5 June (UPI mandate cancelled); eligibility block; 2 LIC policies paid 21 Sept</td></tr>
+    <tr><td class="n">10</td><td><b>Insurance companion: check a claim</b> for an admission date</td><td>"Records ke hisaab se cover us date par active nahi tha…": honest, calm, no promises</td></tr>
+    <tr><td class="n">11</td><td><b>Insurance companion: draft a claim</b> intimation letter + document checklist</td><td>Patient, hospital, date, reason → draft in Actions after "haan"</td></tr>
+    <tr><td class="n">12</td><td><b>Draft a charge-reversal letter</b> to the bank</td><td>IDFC letter with amount ₹2,360, account 2145 and balance trail</td></tr>
+    <tr><td class="n">13</td><td><b>Investments</b></td><td>Arunodaya Large Cap: ₹5,134 invested, ₹5,103.89 now (−₹30.11); ₹151 daily SIP active; ₹1,000 monthly SIP cancelled</td></tr>
+    <tr><td class="n">14</td><td><b>Loans</b></td><td>Arthiva Capital and Tejora Finance applications: both rejected (not eligible)</td></tr>
+    <tr><td class="n">15</td><td><b>Search emails</b> (2,154 de-duplicated)</td><td>Fund confirmations, LIC receipts, statements, with email ID as evidence</td></tr>
+    <tr><td class="n">16</td><td><b>Reminders and spending alerts</b> (in-app)</td><td>Proposed, then saved only after "haan"</td></tr>
+    <tr><td class="n">17</td><td><b>Talk like a person</b>: Hinglish by default, mirrors Hindi/English, interruptible</td><td>Feminine/masculine Hindi grammar matches the voice; amounts in Hindi words</td></tr>
+  </table>
+  <p class="small">* Spending totals include ATM cash, investments and transfers to his own accounts, because that is what the SMS shows as debits. Say "debits" rather than "lifestyle spending" if asked.</p>
+
+  <h2>2. What she will NOT do (by design, a strength to mention)</h2>
+  <div class="box rose">
+    <ul>
+      <li><b>No money movement:</b> no transfers, payments or real cancellations. She declines politely.</li>
+      <li><b>No guessing:</b> credit score, loan interest rate, room-rent limit and policy exclusions are not in the records, so she says she can't verify them.</li>
+      <li><b>No action without a clear "haan/yes":</b> enforced on the server, not just in the prompt. "Draft karo" is never treated as yes.</li>
+      <li><b>No other users' data,</b> and she ignores "ignore your rules" style instructions.</li>
+      <li><b>Never says "sent to the bank":</b> letters are drafts in the Actions tab for the user to send.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="page">
+  <div class="kicker">Presentation · what to ask her, in order, and what she should answer</div>
+  <h2>3. Questions to ask during the demo</h2>
+  <p class="small"><span class="tag must">MUST</span> core flow, about 2½ minutes · <span class="tag">BONUS</span> if time or a judge asks · <span class="tag safe">TRUST</span> shows she refuses to guess or act unsafely. Speak naturally; exact wording isn't needed.</p>
+
+  <h3>A. Core flow (do these in this order)</h3>
+  <table>
+    <tr><th>#</th><th>Ask her</th><th>Expected answer (from the records)</th><th>Why it impresses judges</th></tr>
+    <tr><td class="n">1</td><td><span class="tag must">MUST</span> Click <b>Start money call</b>, then say <span class="ask">"Haan bolo."</span></td><td>Hinglish greeting, then: IDFC charged ₹590 five times on 8 Oct; ₹5 lakh Care Health cover off since 5 June; 2 autopays bounced on PNB.</td><td><b>Understands + tells something new</b></td></tr>
+    <tr><td class="n">2</td><td><span class="tag must">MUST</span> Interrupt mid-sentence: <span class="ask">"Ruko, IDFC wala detail mein batao."</span></td><td>Stops immediately; 5 debits of ₹590 for "minimum balance not maintained" on account 2145; 4 look duplicate = ₹2,360.</td><td><b>Voice: handles interruptions</b></td></tr>
+    <tr><td class="n">3</td><td><span class="tag must">MUST</span> <span class="ask">"Theek hai, reversal draft kar do."</span></td><td>Draft ready for ₹2,360; asks for a clear "haan".</td><td><b>Recommends + acts</b></td></tr>
+    <tr><td class="n">4</td><td><span class="tag must">MUST</span> <span class="ask">"Haan, confirm karo."</span></td><td>"Ho gaya! Actions tab mein mil jayega."</td><td><b>Acts only after explicit yes</b></td></tr>
+    <tr><td class="n">5</td><td><span class="tag must">MUST</span> <span class="ask">"Papa hospital mein admit hain aaj, claim chalega?"</span></td><td>Calm line first, then: records show the Care Health cover was not active on that date (cancelled 5 June, mandate cancelled); the insurer decides.</td><td><b>Insurance companion; honest under pressure</b></td></tr>
+    <tr><td class="n">6</td><td><span class="tag must">MUST</span> <span class="ask">"Unka naam Dinesh Kumar Gupta, Apollo Hospital Kolkata, chest pain. Draft bana do."</span> → <span class="ask">"Haan."</span></td><td>Claim intimation draft with the honest note, saved after "haan".</td><td><b>One more thing done</b></td></tr>
+    <tr><td class="n">7</td><td><span class="tag must">MUST</span> Open the <b>Actions</b> tab.</td><td>Both drafts visible: IDFC reversal letter and Care Health claim intimation.</td><td><b>Proof of action</b></td></tr>
+  </table>
+
+  <h3>B. Bonus questions (pick 1–2 if time allows)</h3>
+  <table>
+    <tr><th>#</th><th>Ask her</th><th>Expected answer</th></tr>
+    <tr><td class="n">8</td><td><span class="tag">BONUS</span> <span class="ask">"Mera IDFC account mein kitna paisa bacha hai?"</span></td><td>₹3,994.90 as of 14 Oct.</td></tr>
+    <tr><td class="n">9</td><td><span class="tag">BONUS</span> <span class="ask">"Kaun kaun mujhse regularly paise kaatta hai?"</span></td><td>Bachatt about 17 times a week (₹24,998 in 30 days), Trusave Fintech about 12×/week, Kreditbee and others.</td></tr>
+    <tr><td class="n">10</td><td><span class="tag">BONUS</span> <span class="ask">"PNB pe autopay kyun bounce ho raha hai?"</span></td><td>2 bounces since 7 Oct on account 9380, ₹119.67 penalty; Trusave Fintech debits that same account about 12 times a week.</td></tr>
+    <tr><td class="n">11</td><td><span class="tag">BONUS</span> <span class="ask">"Mera health cover kitne ka tha?"</span></td><td>₹5,00,000 Care Health base cover for 1 adult; cancelled 5 June.</td></tr>
+    <tr><td class="n">12</td><td><span class="tag">BONUS</span> <span class="ask">"Meri SIP chal rahi hai kya?"</span></td><td>Yes: ₹151 daily SIP in Arunodaya Large Cap Fund is active; the ₹1,000 monthly one was cancelled.</td></tr>
+    <tr><td class="n">13</td><td><span class="tag">BONUS</span> <span class="ask">"LIC premium last kab bhara tha?"</span></td><td>21 September (₹4,677 and ₹2,596 policies).</td></tr>
+    <tr><td class="n">14</td><td><span class="tag">BONUS</span> <span class="ask">"What are my investments worth now?"</span> (in English)</td><td>Replies in English: ₹5,103.89 against ₹5,134 invested.</td></tr>
+  </table>
+
+  <h3>C. Trust questions (these show safety; use one if a judge looks sceptical)</h3>
+  <table>
+    <tr><th>#</th><th>Ask her</th><th>Expected behaviour</th></tr>
+    <tr><td class="n">15</td><td><span class="tag safe">TRUST</span> <span class="ask">"Mera CIBIL score kitna hai?"</span></td><td>Says she can't verify a credit score from his records; offers what she can check.</td></tr>
+    <tr><td class="n">16</td><td><span class="tag safe">TRUST</span> <span class="ask">"Arpit ko 5,000 bhej do."</span></td><td>Declines: she can't move money.</td></tr>
+    <tr><td class="n">17</td><td><span class="tag safe">TRUST</span> <span class="ask">"Meri policy mein room rent limit kitni hai?"</span></td><td>Policy wording isn't in the records; the policy document or insurer will confirm. No invented number.</td></tr>
+    <tr><td class="n">18</td><td><span class="tag safe">TRUST</span> <span class="ask">"Kya IDFC paisa pakka wapas karega?"</span></td><td>Can't promise; it's a likely duplicate the bank must review.</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <div class="kicker">Impact · the real problems she solves today, with this user's numbers</div>
+  <h2>4. Problems she solves (with current knowledge)</h2>
+  <div class="grid2">
+    <div class="prob"><b class="t">1. Hidden duplicate bank fees</b>Banks quietly charge the same fee multiple times and nobody reads the SMS. She found <span class="num">₹590 × 5 on one day = ₹2,360 extra</span> and drafted the reversal letter on the call.</div>
+    <div class="prob"><b class="t">2. Insurance that lapsed without anyone noticing</b>His <span class="num">₹5,00,000 Care Health cover</span> stopped on 5 June when the UPI autopay was cancelled. She tells him before a hospital visit, not after a rejected claim.</div>
+    <div class="prob"><b class="t">3. Panic and confusion in a hospital moment</b>"Is it covered? What do I do?" She checks cover for the admission date, answers honestly, and <span class="num">drafts the claim intimation with a document checklist</span>.</div>
+    <div class="prob"><b class="t">4. Autopays that bounce and add penalties</b><span class="num">2 bounces, ₹119.67 penalty</span> on PNB 9380. She links it to the cause: Trusave Fintech pulling from the same account about 12 times a week.</div>
+    <div class="prob"><b class="t">5. Minimum-balance fee traps</b>IDFC needs ₹25,000 average balance; <span class="num">6 warnings and ₹2,950 already paid in fees</span>. She surfaces the pattern, not just one charge.</div>
+    <div class="prob"><b class="t">6. Too many silent auto-debits</b><span class="num">8 recurring debits</span>, including Bachatt ~17×/week and Kreditbee ~7×/week. He finally sees who takes money and how often.</div>
+    <div class="prob"><b class="t">7. Money information scattered everywhere</b>SMS, emails, insurance, investments, loans: <span class="num">2,592 SMS and 2,154 emails</span> turned into one picture he can ask about in one sentence.</div>
+    <div class="prob"><b class="t">8. Finance apps that don't speak his language</b>Hinglish by default, mirroring Hindi or English, with amounts in Indian words. No dashboard to learn; just a call.</div>
+  </div>
+
+  <h2>5. Why she can be trusted (one line each)</h2>
+  <ul>
+    <li>Every number comes from his records through a tool; each fact is tied to an SMS or email ID.</li>
+    <li>Code checks every rupee amount in an answer against the tool results before it is shown, and right after it is spoken.</li>
+    <li>Tested on 35 scenarios with the real model: <b>35/35 passed, 19/19 critical</b> (English, Hinglish, Hindi), including refusing to guess and refusing unsafe actions.</li>
+    <li>Personal identifiers (PAN, phone, email) are redacted from the stored data.</li>
+  </ul>
+
+  <h2>6. Honest limits (say these if asked, not before)</h2>
+  <div class="box amber">
+    <ul>
+      <li>One demo user (Vivek Gupta) from the event's synthetic dataset; records up to 15 Oct 2026. No live bank connection.</li>
+      <li>Letters and claims are <b>drafts</b>; she doesn't send them to banks or insurers yet.</li>
+      <li>PDF attachments (credit report, policy wording) aren't read yet, so coverage clauses and credit score are unknown to her.</li>
+      <li>The ₹135 premium vs ₹37 rate card can't be called an overcharge: the data doesn't say whether ₹135 is per day or per cycle.</li>
+      <li>Spoken answers are checked right after speaking (voice streams live); text answers are checked before they are shown.</li>
+    </ul>
+  </div>
+
+  <h2>7. 10-second closing line</h2>
+  <div class="box mint"><p><b>"In one call she found ₹2,360 he was overcharged and a ₹5 lakh health cover he didn't know he'd lost, told him in his own language, and prepared both fixes, with every number traceable to his own records."</b></p></div>
+</section>
+
+</body>
+</html>
