@@ -1,9 +1,4 @@
 import { api } from "./api";
-const actionTools = /* @__PURE__ */ new Set([
-  "create_reminder",
-  "configure_spending_alert",
-  "prepare_subscription_action",
-]);
 const transitions = {
   IDLE: ["CONNECTING", "DISCONNECTED"],
   CONNECTING: ["LISTENING", "ERROR", "DISCONNECTED", "RECONNECTING"],
@@ -62,13 +57,12 @@ class LiveVoiceSession {
   context = null;
   source = null;
   processor = null;
-  playing = /* @__PURE__ */ new Set();
+  playing = new Set();
   generation = 0;
   disposed = false;
   ignoreAssistantOutput = false;
   modelTurnComplete = false;
   nextPlaybackTime = 0;
-  toolNames = /* @__PURE__ */ new Set();
   machine = new VoiceSessionStateMachine();
   transition(next) {
     if (this.machine.transition(next)) this.callbacks.state(next);
@@ -78,14 +72,13 @@ class LiveVoiceSession {
     try {
       const config = await api.voiceSession();
       const { GoogleGenAI, Modality } = await import("@google/genai");
-      this.toolNames = new Set((config.tools ?? []).map((t) => t.name));
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
       });
       this.context = new AudioContext();
       await this.context.audioWorklet.addModule("/pcm-worklet.js");
-      const ai = new GoogleGenAI({ apiKey: config.token, httpOptions: { apiVersion: "v1alpha" } });
+      const ai = new GoogleGenAI({ apiKey: config.token, httpOptions: { apiVersion: config.apiVersion } });
       this.session = await ai.live.connect({
         model: config.model,
         config: {
@@ -165,11 +158,12 @@ class LiveVoiceSession {
     if (calls.length) {
       this.transition("PROCESSING");
       for (const call of calls) {
-        if (!call.name || !this.toolNames.has(call.name)) continue;
+        if (!call.name) continue;
         try {
-          const result = await this.runTool(call.name, call.args ?? {});
+          // The API owns the tool registry: it validates the name and arguments and scopes data to the user.
+          const { result, proposesAction } = await api.runTool(call.name, call.args ?? {});
           if (current !== this.generation || this.disposed) return;
-          if (actionTools.has(call.name)) this.callbacks.actionProposed?.();
+          if (proposesAction) this.callbacks.actionProposed?.();
           this.session?.sendToolResponse({
             functionResponses: [{ id: call.id, name: call.name, response: { result } }],
           });
@@ -196,40 +190,6 @@ class LiveVoiceSession {
     }
     if (current === this.generation && !this.disposed && this.modelTurnComplete && this.playing.size === 0)
       this.transition("LISTENING");
-  }
-  async runTool(name, args) {
-    const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4100/api/v1";
-    const path = {
-      get_spending_summary: "/analytics/summary",
-      get_category_breakdown: "/analytics/categories",
-      compare_monthly_spending: "/analytics/compare",
-      find_recurring_subscriptions: "/subscriptions",
-      get_upcoming_bills: "/bills",
-      get_emi_schedule: "/emis",
-      get_unusual_spending: "/analytics/unusual",
-    };
-    const isAction = actionTools.has(name);
-    const response = await fetch(
-      `${apiUrl}${isAction ? "/actions" : path[name]}`,
-      isAction
-        ? {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type:
-                name === "create_reminder"
-                  ? "reminder"
-                  : name === "configure_spending_alert"
-                    ? "spending_alert"
-                    : "subscription_workflow",
-              title: typeof args.title === "string" ? args.title.slice(0, 100) : "Assistant proposal",
-              details: typeof args.details === "string" ? args.details.slice(0, 500) : "Review this proposed action.",
-            }),
-          }
-        : void 0,
-    );
-    if (!response.ok) throw new Error("Tool failed");
-    return response.json();
   }
   async play(base64, _mime) {
     if (!this.context) return;
