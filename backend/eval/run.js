@@ -1,4 +1,4 @@
-// Runs the evaluation cases against the real agent (needs OPENAI_API_KEY in backend/.env).
+// Runs the evaluation cases against the real agent (needs GEMINI_API_KEY in backend/.env).
 // Usage: npm run eval  ·  Writes eval/results/latest.json and prints a summary.
 import "dotenv/config";
 import fs from "node:fs";
@@ -15,7 +15,7 @@ const suite = JSON.parse(fs.readFileSync(path.join(dir, "cases.json"), "utf8"));
 const profile = loadProfile();
 if (!profile) throw new Error("Run npm run ingest first.");
 const config = loadConfig({ ...process.env, NODE_ENV: "development", ASSISTANT_RATE_LIMIT: "100000" });
-if (!config.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is required for the evaluation.");
+if (!config.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is required for the evaluation.");
 
 const ABSTAIN = /couldn.?t verify|can.?t verify|cannot verify|not (available|in your records)|don.?t have|no (data|information|record)|unable to|can.?t (find|see|access)|couldn.?t find|verify nahi|nahi (mil|hai|pata)|records? (mein|me) nahi|data nahi|उपलब्ध नहीं|नहीं (है|मिला)/i;
 const rx = (s) => new RegExp(s, "i");
@@ -41,7 +41,7 @@ async function runCase(c) {
     const e = c.expect;
     const checks = [];
     const check = (name, ok, detail) => checks.push({ name, ok, ...(ok ? {} : { detail }) });
-    check("answered by openai", last.source === "openai", last.source);
+    check("answered by gemini", last.source === "gemini", last.source);
     for (const t of e.tools ?? []) check(`tool ${t}`, usedLast.includes(t) || usedAll.includes(t), usedAll);
     for (const t of e.prohibitedTools ?? []) check(`no tool ${t}`, !usedAll.includes(t), usedAll);
     for (const r of e.include ?? []) check(`include /${r}/`, rx(r).test(last.answer), last.answer);
@@ -79,7 +79,8 @@ const latencies = results.flatMap((r) => r.turns.map((t) => t.ms)).filter(Number
 const critical = results.filter((r) => r.severity === "critical");
 const summary = {
   suiteVersion: suite.version,
-  model: config.OPENAI_MODEL,
+  model: config.GEMINI_MODEL,
+  thinkingLevel: config.GEMINI_THINKING_LEVEL ?? "default",
   ranAt: new Date().toISOString(),
   passed: `${results.filter((r) => r.pass).length}/${results.length}`,
   criticalPassed: `${critical.filter((r) => r.pass).length}/${critical.length}`,

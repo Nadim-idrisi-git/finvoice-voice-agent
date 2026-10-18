@@ -2,7 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { fakeFetch, startApp } from "./helpers.js";
 
-describe("versioned API (no OpenAI key)", () => {
+describe("versioned API (no Gemini key)", () => {
   let api;
   before(async () => (api = await startApp()));
   after(() => api.close());
@@ -43,7 +43,7 @@ describe("versioned API (no OpenAI key)", () => {
   it("returns 404 for an unknown action", async () => {
     assert.equal((await api.request("/api/v1/actions/nope/confirm", { body: { confirmation: true } })).status, 404);
   });
-  it("does not issue a voice session without an OpenAI key", async () => {
+  it("does not issue a voice session without a Gemini key", async () => {
     assert.equal((await api.request("/api/v1/voice/session", { body: {} })).status, 503);
   });
   it("validates requested month and returns historical synthetic categories", async () => {
@@ -97,22 +97,43 @@ describe("guards", () => {
   });
 });
 
-describe("OpenAI Realtime voice session", () => {
-  it("mints a client secret with server-owned instructions and tools, never exposing the API key", async () => {
-    const fetch = fakeFetch({ value: "ek_test", expires_at: 1790000000 });
-    const api = await startApp({ OPENAI_API_KEY: "sk-secret" }, { fetch });
-    const { status, body } = await api.request("/api/v1/voice/session", { body: {} });
+describe("Gemini Live voice session", () => {
+  it("mints an ephemeral token with server-owned instructions and tools, never exposing the API key", async () => {
+    const fetch = fakeFetch({ name: "auth_tokens/ek_test" });
+    const api = await startApp({ GEMINI_API_KEY: "gk-secret" }, { fetch });
+    const { status, body } = await api.request("/api/v1/voice/session", { body: { voice: "puck" } });
     await api.close();
     assert.equal(status, 200);
-    assert.equal(body.clientSecret, "ek_test");
-    assert.equal(body.model, "gpt-realtime-2.1");
-    assert.equal(fetch.calls[0].url, "https://api.openai.com/v1/realtime/client_secrets");
-    assert.equal(fetch.calls[0].init.headers.Authorization, "Bearer sk-secret");
-    const session = fetch.calls[0].body.session;
-    assert.equal(session.type, "realtime");
-    assert.equal(session.audio.output.voice, "marin");
-    assert.ok(session.tools.some((t) => t.name === "get_upcoming_bills" && t.type === "function"));
-    assert.doesNotMatch(JSON.stringify(body), /sk-secret/);
+    assert.equal(body.token, "auth_tokens/ek_test");
+    assert.equal(body.model, "gemini-3.8-live");
+    assert.equal(body.voice, "Puck");
+    assert.equal(fetch.calls[0].url, "https://generativelanguage.googleapis.com/v1beta/auth_tokens");
+    assert.equal(fetch.calls[0].init.headers["x-goog-api-key"], "gk-secret");
+    assert.equal(fetch.calls[0].body.uses, 1);
+    const setup = fetch.calls[0].body.bidiGenerateContentSetup;
+    assert.equal(setup.model, "models/gemini-3.8-live");
+    assert.equal(setup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Puck");
+    assert.match(setup.systemInstruction.parts[0].text, /masculine/);
+    const tools = setup.tools[0].functionDeclarations;
+    assert.ok(tools.some((t) => t.name === "get_upcoming_bills" && t.behavior === "BLOCKING"));
+    assert.doesNotMatch(JSON.stringify(body), /gk-secret/);
+  });
+
+  it("retries once when the connection to Gemini drops, then reports 502", async () => {
+    const recovered = fakeFetch(new TypeError("fetch failed"), { name: "auth_tokens/ek_retry" });
+    let api = await startApp({ GEMINI_API_KEY: "gk-secret" }, { fetch: recovered });
+    const ok = await api.request("/api/v1/voice/session", { body: {} });
+    await api.close();
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.token, "auth_tokens/ek_retry");
+    assert.equal(recovered.calls.length, 2);
+
+    const down = fakeFetch(new TypeError("fetch failed"), new TypeError("fetch failed"));
+    api = await startApp({ GEMINI_API_KEY: "gk-secret" }, { fetch: down });
+    const failed = await api.request("/api/v1/voice/session", { body: {} });
+    await api.close();
+    assert.equal(failed.status, 502);
+    assert.equal(down.calls.length, 2);
   });
 });
 
@@ -152,6 +173,19 @@ describe("voice confirmation guard", () => {
     await api.close();
     assert.equal(refused.status, 409);
     assert.equal(accepted.body.result.status, "SUCCEEDED");
+  });
+
+  it("accepts a yes transcribed in Devanagari, but not a Devanagari no", async () => {
+    const api = await startApp();
+    const confirm = async (userTranscript) => {
+      const draft = await api.request("/api/v1/tools/create_reminder", { body: { args: { title: "Pay rent", details: "Before the 1st" } } });
+      return api.request("/api/v1/tools/confirm_action", { body: { args: { action_id: draft.body.result.id }, userTranscript } });
+    };
+    const yes = await confirm("हाँ, कर दो");
+    const no = await confirm("नहीं, रुको");
+    await api.close();
+    assert.equal(yes.body.result.status, "SUCCEEDED");
+    assert.equal(no.status, 409);
   });
 });
 

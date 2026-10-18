@@ -1,12 +1,13 @@
-// Smoke test for the live voice agent: drives the real Realtime model in text mode with the exact
-// voice prompt and tools, plays a Hinglish caller, and prints the conversation. Audio is not tested.
-// Usage: npm run voice-smoke   (needs OPENAI_API_KEY in backend/.env)
+// Smoke test for the live voice agent: mints the same ephemeral Live session the browser gets (voice prompt,
+// tools, voice), plays a Hinglish caller as typed turns, and prints the spoken transcript. Audio quality is not tested.
+// Usage: npm run voice-smoke   (needs GEMINI_API_KEY in backend/.env)
 import "dotenv/config";
 import { loadConfig } from "../src/config.js";
 import { createProfileStore, loadProfile } from "../src/store/profile.js";
 import { createActionService } from "../src/services/actions.js";
-import { executeTool, toolDefinitions } from "../src/services/tools.js";
-import { voiceInstructions } from "../src/services/prompts.js";
+import { executeTool } from "../src/services/tools.js";
+import { createGeminiClient } from "../src/services/gemini.js";
+import { createVoiceSession } from "../src/services/voice.js";
 import { validateAnswer } from "../src/services/validator.js";
 
 const config = loadConfig();
@@ -16,49 +17,46 @@ const turns = process.argv.slice(2).length
   ? process.argv.slice(2)
   : ["Haan bolo, kya hua?", "IDFC wala charge thoda detail mein batao", "Theek hai, uska reversal draft kar do", "Haan, confirm karo"];
 
-const ws = new WebSocket(`wss://api.openai.com/v1/realtime?model=${config.OPENAI_REALTIME_MODEL}`, [
-  "realtime",
-  `openai-insecure-api-key.${config.OPENAI_API_KEY}`,
-]);
-const send = (event) => ws.send(JSON.stringify(event));
+const gemini = createGeminiClient({ apiKey: config.GEMINI_API_KEY, fetch, log: console });
+const session = await createVoiceSession({ config, user: ctx.user, gemini });
+console.log(`model ${session.model} · voice ${session.voice}\n`);
+
+const ws = new WebSocket(`${session.liveUrl}?access_token=${encodeURIComponent(session.token)}`);
+const send = (message) => ws.send(JSON.stringify(message));
+const say = (text) => send({ clientContent: { turns: [{ role: "user", parts: [{ text }] }], turnComplete: true } });
 const toolResults = [];
-let pendingTurns = [...turns];
+const pendingTurns = [...turns];
 let lastUser = "";
+let spoken = "";
 
-ws.onopen = () => {
-  send({
-    type: "session.update",
-    session: { type: "realtime", instructions: voiceInstructions(ctx.user, config.OPENAI_VOICE), tools: toolDefinitions, tool_choice: "auto", output_modalities: ["text"] },
-  });
-  send({ type: "response.create" }); // the agent opens the call, as in the browser
-};
-
+ws.onopen = () => send({ setup: {} }); // the setup itself is locked in the token
 ws.onmessage = async ({ data }) => {
-  const event = JSON.parse(data);
-  if (event.type === "error") {
-    console.log("ERROR:", event.error?.message);
-    return ws.close();
-  }
-  if (event.type !== "response.done") return;
-  const output = event.response?.output ?? [];
-  const calls = output.filter((item) => item.type === "function_call");
-  const spokenBeforeTools = output.filter((item) => item.type === "message").flatMap((item) => item.content ?? []).map((p) => p.text ?? p.transcript ?? "").join(" ").trim();
-  if (calls.length && spokenBeforeTools) console.log(`AGENT (before tool): ${spokenBeforeTools}`);
-  if (calls.length) {
-    for (const call of calls) {
-      let result;
+  const message = JSON.parse(typeof data === "string" ? data : Buffer.from(await data.arrayBuffer()).toString());
+  // The agent opens the call, as in the browser.
+  if (message.setupComplete) return say("(The call has just connected. Open the weekly money call now.)");
+  if (message.toolCall) {
+    const functionResponses = [];
+    for (const call of message.toolCall.functionCalls ?? []) {
+      let response;
       try {
-        ({ result } = await executeTool(call.name, JSON.parse(call.arguments || "{}"), ctx));
+        const { result } = await executeTool(call.name, call.args ?? {}, { ...ctx, userMessage: lastUser || undefined });
         toolResults.push(result);
+        response = { result };
       } catch (error) {
-        result = { error: error.message };
+        response = { error: error.message };
       }
+      if (spoken.trim()) console.log(`AGENT (before tool): ${spoken.trim()}`), (spoken = "");
       console.log(`   [tool] ${call.name}`);
-      send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result) } });
+      functionResponses.push({ id: call.id, name: call.name, response });
     }
-    return send({ type: "response.create" });
+    return send({ toolResponse: { functionResponses } });
   }
-  const text = output.flatMap((item) => item.content ?? []).map((part) => part.text ?? part.transcript ?? "").join(" ").trim();
+  const content = message.serverContent;
+  if (!content) return;
+  if (content.outputTranscription?.text) spoken += content.outputTranscription.text;
+  if (!content.turnComplete) return;
+  const text = spoken.trim();
+  spoken = "";
   if (text) {
     const check = validateAnswer({
       answer: text,
@@ -77,8 +75,10 @@ ws.onmessage = async ({ data }) => {
   }
   lastUser = next;
   console.log(`\nUSER: ${next}`);
-  send({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text: next }] } });
-  send({ type: "response.create" });
+  say(next);
 };
-ws.onclose = () => process.exit(0);
-setTimeout(() => (console.log("timeout"), process.exit(1)), 120_000);
+ws.onclose = (event) => {
+  if (event.code !== 1000) console.log("closed:", event.code, event.reason);
+  process.exit(0);
+};
+setTimeout(() => (console.log("timeout"), process.exit(1)), 180_000);

@@ -2,7 +2,7 @@
   "name": "finvoice",
   "private": true,
   "version": "0.2.0",
-  "description": "Voice-first financial assistant (synthetic data): React + Tailwind frontend, Node + Express backend, OpenAI.",
+  "description": "Voice-first financial assistant (synthetic data): React + Tailwind frontend, Node + Express backend, Gemini.",
   "scripts": {
     "setup": "npm install --prefix backend && npm install --prefix frontend",
     "dev": "node dev.js",

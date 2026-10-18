@@ -2,43 +2,41 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { fakeFetch, startApp } from "./helpers.js";
 
-const message = (text) => ({ type: "message", content: [{ type: "output_text", text }] });
-const call = (name, args = {}, id = "call_1") => ({
-  type: "function_call",
-  call_id: id,
-  name,
-  arguments: JSON.stringify(args),
-});
+const turn = (...parts) => ({ candidates: [{ content: { role: "model", parts } }] });
+const message = (text) => turn({ text });
+const call = (name, args = {}, id = "call_1") => turn({ functionCall: { id, name, args }, thoughtSignature: "sig_1" });
 
-describe("OpenAI text agent", () => {
+describe("Gemini text agent", () => {
   it("runs the tools the model asks for and returns the model's grounded answer", async () => {
     const fetch = fakeFetch(
-      { id: "resp_1", output: [call("get_spending_summary")] },
-      { id: "resp_2", output: [message("You spent ₹69,247.87 this month.")] },
+      call("get_spending_summary"),
+      message("You spent ₹69,247.87 this month."),
     );
-    const api = await startApp({ OPENAI_API_KEY: "sk-test" }, { fetch });
+    const api = await startApp({ GEMINI_API_KEY: "gk-test" }, { fetch });
     const { body } = await api.request("/api/v1/assistant/message", { body: { message: "How much did I spend?" } });
     await api.close();
 
-    assert.equal(body.source, "openai");
+    assert.equal(body.source, "gemini");
     assert.equal(body.answer, "You spent ₹69,247.87 this month.");
     assert.deepEqual(body.toolsUsed, ["get_spending_summary"]);
     const [first, second] = fetch.calls;
-    assert.equal(first.url, "https://api.openai.com/v1/responses");
-    assert.equal(first.body.model, "gpt-6-luna");
-    assert.ok(first.body.tools.length >= 7);
-    assert.equal(second.body.previous_response_id, "resp_1");
-    const output = JSON.parse(second.body.input[0].output);
-    assert.equal(second.body.input[0].call_id, "call_1");
-    assert.match(output.totalRupees, /^₹/);
+    assert.equal(first.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
+    assert.equal(first.init.headers["x-goog-api-key"], "gk-test");
+    assert.ok(first.body.tools[0].functionDeclarations.length >= 7);
+    // The model turn is sent back verbatim (thought signature included), followed by the tool result.
+    const [, modelTurn, toolTurn] = second.body.contents;
+    assert.equal(modelTurn.parts[0].thoughtSignature, "sig_1");
+    const response = toolTurn.parts[0].functionResponse;
+    assert.equal(response.id, "call_1");
+    assert.match(response.response.result.totalRupees, /^₹/);
   });
 
   it("returns action proposals created by tools, still awaiting confirmation", async () => {
     const fetch = fakeFetch(
-      { id: "r1", output: [call("create_reminder", { title: "Pay rent", details: "Remind me on the 1st" })] },
-      { id: "r2", output: [message("I drafted a reminder. Please confirm it under Actions.")] },
+      call("create_reminder", { title: "Pay rent", details: "Remind me on the 1st" }),
+      message("I drafted a reminder. Please confirm it under Actions."),
     );
-    const api = await startApp({ OPENAI_API_KEY: "sk-test" }, { fetch });
+    const api = await startApp({ GEMINI_API_KEY: "gk-test" }, { fetch });
     const { body } = await api.request("/api/v1/assistant/message", { body: { message: "Remind me to pay rent" } });
     const reminders = await api.request("/api/v1/reminders");
     await api.close();
@@ -49,18 +47,29 @@ describe("OpenAI text agent", () => {
   });
 
   it("reports tool errors back to the model instead of failing the request", async () => {
-    const fetch = fakeFetch({ id: "r1", output: [call("transfer_money")] }, { id: "r2", output: [message("I can't do that.")] });
-    const api = await startApp({ OPENAI_API_KEY: "sk-test" }, { fetch });
+    const fetch = fakeFetch(call("transfer_money"), message("I can't do that."));
+    const api = await startApp({ GEMINI_API_KEY: "gk-test" }, { fetch });
     const { body } = await api.request("/api/v1/assistant/message", { body: { message: "Send money to Raj" } });
     await api.close();
 
     assert.equal(body.answer, "I can't do that.");
-    assert.match(JSON.parse(fetch.calls[1].body.input[0].output).error, /Unknown tool/);
+    assert.match(fetch.calls[1].body.contents.at(-1).parts[0].functionResponse.response.error, /Unknown tool/);
   });
 
-  it("falls back to the rule-based assistant when OpenAI fails", async () => {
+  it("keeps the conversation for the next message", async () => {
+    const fetch = fakeFetch(message("Hello Vivek."), message("Sure."));
+    const api = await startApp({ GEMINI_API_KEY: "gk-test" }, { fetch });
+    await api.request("/api/v1/assistant/message", { body: { message: "Hi" } });
+    await api.request("/api/v1/assistant/message", { body: { message: "Thanks" } });
+    await api.close();
+
+    const texts = fetch.calls[1].body.contents.map((c) => `${c.role}:${c.parts[0].text}`);
+    assert.deepEqual(texts, ["user:Hi", "model:Hello Vivek.", "user:Thanks"]);
+  });
+
+  it("falls back to the rule-based assistant when Gemini fails", async () => {
     const fetch = fakeFetch({ ok: false, status: 500, json: {} });
-    const api = await startApp({ OPENAI_API_KEY: "sk-test" }, { fetch });
+    const api = await startApp({ GEMINI_API_KEY: "gk-test" }, { fetch });
     const { status, body } = await api.request("/api/v1/assistant/message", {
       body: { message: "How much did I spend this month?" },
     });

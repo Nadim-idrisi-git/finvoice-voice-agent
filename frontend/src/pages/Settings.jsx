@@ -5,12 +5,12 @@ import { card, cardTitle } from "../lib/ui";
 const rows = [
   {
     title: "Live voice provider",
-    text: "OpenAI Realtime over WebRTC, with natural turn-taking and interruption. Requires an OpenAI API key on the backend.",
+    text: "Gemini Live over WebSocket, with natural turn-taking and interruption. Requires a Gemini API key on the backend.",
     end: <span className="rounded-[10px] bg-[#fff4e4] px-[7px] py-[5px] text-[8px] font-bold text-[#9a793f]">Optional</span>,
   },
   {
     title: "AI text assistant",
-    text: "An OpenAI agent answers using tools over your records. Without a key, a rule-based assistant answers instead.",
+    text: "A Gemini agent answers using tools over your records. Without a key, a rule-based assistant answers instead.",
     end: <Icon name="Sparkles" size={18} className="shrink-0 text-[#568b68]" />,
   },
   {

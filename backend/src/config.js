@@ -44,13 +44,13 @@ export function loadConfig(env = process.env) {
     // Opt-in: serve the synthetic demo API in production (no real users or bank data).
     DEMO_MODE,
     MONGODB_URI: text(env, "MONGODB_URI", undefined),
-    OPENAI_API_KEY: text(env, "OPENAI_API_KEY", undefined),
-    OPENAI_MODEL: text(env, "OPENAI_MODEL", "gpt-6-luna"),
-    // Empty = the model's default. Lower effort is faster; change only after npm run eval.
-    OPENAI_REASONING_EFFORT: text(env, "OPENAI_REASONING_EFFORT", undefined),
-    OPENAI_REALTIME_MODEL: text(env, "OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
-    OPENAI_VOICE: text(env, "OPENAI_VOICE", "marin"),
-    OPENAI_TRANSCRIBE_MODEL: text(env, "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),
+    GEMINI_API_KEY: text(env, "GEMINI_API_KEY", undefined),
+    GEMINI_MODEL: text(env, "GEMINI_MODEL", "gemini-3.8-flash"),
+    // "low" measured 2026-10-18 (3 runs): 35, 32, 35 of 35 at p50 4-5s; the default ("high") hit 30s timeouts.
+    // Change only after npm run eval.
+    GEMINI_THINKING_LEVEL: text(env, "GEMINI_THINKING_LEVEL", "low"),
+    GEMINI_LIVE_MODEL: text(env, "GEMINI_LIVE_MODEL", "gemini-3.8-live"),
+    GEMINI_VOICE: text(env, "GEMINI_VOICE", "Kore"),
     ASSISTANT_RATE_LIMIT: positiveInt(env, "ASSISTANT_RATE_LIMIT", 20),
   };
 }

@@ -49,7 +49,10 @@ const facts = (run) => async (ctx, args) => {
   if (!ctx.store.profile) throw new HttpError(503, "The event dataset is not loaded. Run npm run ingest.");
   return run(ctx.store.profile, args, ctx);
 };
-const AFFIRMATIVE = /\b(yes|yeah|yep|haan|han|ha|haa|ji|confirm|confirmed|ok|okay|sure|go ahead|do it|kar do|karo|kardo|theek|thik|bilkul|send it|please do)\b/i;
+// Live transcription writes spoken Hindi in Devanagari as often as in Latin script, so both are accepted.
+// \b is ASCII-only in JS, so word edges are letters/marks in any script.
+const AFFIRMATIVE =
+  /(?<![\p{L}\p{M}])(yes|yeah|yep|haan|han|ha|haa|ji|confirm|confirmed|ok|okay|sure|go ahead|do it|kar do|karo|kardo|theek|thik|bilkul|send it|please do|हाँ|हां|हा|जी|ठीक|कर दो|करो|कर दीजिए|बिल्कुल|ओके|यस|कन्फर्म)(?![\p{L}\p{M}])/iu;
 const textArg = (name, max) => (args) => {
   const value = typeof args?.[name] === "string" ? args[name].trim().slice(0, max) : "";
   return value.length >= 2 ? { [name]: value } : null;
@@ -367,12 +370,11 @@ const tools = [
 ];
 const byName = new Map(tools.map((tool) => [tool.name, tool]));
 
-/** OpenAI function tools (same shape for the Responses API and Realtime sessions). */
+/** Gemini function declarations (same shape for generateContent and Live sessions). */
 export const toolDefinitions = tools.map(({ name, description, parameters }) => ({
-  type: "function",
   name,
   description,
-  parameters: parameters ?? noParameters,
+  parametersJsonSchema: parameters ?? noParameters,
 }));
 
 /** Adds a spoken-ready `xRupees` string beside every numeric `xPaise` field. */

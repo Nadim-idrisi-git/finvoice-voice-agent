@@ -122,7 +122,7 @@ export function AssistantPanel({ assistant }) {
         <span className="flex items-center gap-1">
           <Icon name="ShieldCheck" size={13} /> Synthetic demo records only
         </span>
-        <span className="text-right">Live voice sends audio to OpenAI when configured. Verify important details.</span>
+        <span className="text-right">Live voice sends audio to Google Gemini when configured. Verify important details.</span>
       </div>
     </section>
   );

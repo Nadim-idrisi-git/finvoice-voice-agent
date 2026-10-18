@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
-import { LiveVoiceSession } from "../services/voice";
+import { DEFAULT_VOICE, LiveVoiceSession, VOICES } from "../services/voice";
 
 const greeting = {
   id: 0,
@@ -19,9 +19,11 @@ export function useAssistant({ onActionProposed }) {
   const [muted, setMutedState] = useState(false);
   const [voice, setVoiceChoice] = useState(() => {
     try {
-      return localStorage.getItem("finvoice.voice") || "marin";
+      // A voice saved from an older provider is not in the list; fall back to the default.
+      const saved = localStorage.getItem("finvoice.voice");
+      return VOICES.some((v) => v.id === saved) ? saved : DEFAULT_VOICE;
     } catch {
-      return "marin";
+      return DEFAULT_VOICE;
     }
   });
   function setVoice(next) {

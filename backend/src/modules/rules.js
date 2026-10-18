@@ -29,7 +29,7 @@ const categoryMap = {
 const dueDate = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /**
- * Deterministic, rule-based answer to a finance question. Used when OpenAI is not configured or unavailable.
+ * Deterministic, rule-based answer to a finance question. Used when Gemini is not configured or unavailable.
  * `data` is the caller's owner-scoped view: { transactions, bills, emis }.
  */
 function answerFinancialQuestion(message, { transactions: rows, bills: allBills, emis: allEmis }) {

@@ -1,15 +1,7 @@
 import { Icon } from "./Icon";
+import { VOICES } from "../services/voice";
 
 // Voice-first hero: the call is the product, so it leads the page.
-
-const VOICES = [
-  { id: "marin", label: "Marin · female" },
-  { id: "cedar", label: "Cedar · male" },
-  { id: "coral", label: "Coral · female" },
-  { id: "sage", label: "Sage · female" },
-  { id: "ash", label: "Ash · male" },
-  { id: "verse", label: "Verse · male" },
-];
 
 const STATUS = {
   IDLE: { label: "Ready for your weekly money call", hint: "Tap the button and speak in Hinglish, Hindi, or English." },

@@ -1,6 +1,6 @@
 # API
 
-Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /health` reports database, store, and whether OpenAI is configured.
+Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /health` reports database, store, and whether Gemini is configured.
 
 **Read models** (owner-scoped, synthetic): `GET /session`, `/dashboard`, `/analytics/summary`, `/analytics/categories`, `/analytics/month?month=YYYY-MM`, `/analytics/compare`, `/analytics/merchants`, `/analytics/unusual`, `/subscriptions`, `/bills`, `/emis`, `/audit`, `/reminders`, `/alerts`.
 
@@ -11,7 +11,7 @@ Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /hea
 ```json
 {
   "answer": "Your next bill is Electricity for ₹2,350, due 21 October…",
-  "source": "openai",
+  "source": "gemini",
   "actionProposal": null,
   "actionProposals": [],
   "toolsUsed": ["get_upcoming_bills"],
@@ -20,9 +20,9 @@ Base path: `/api/v1` on the backend (default `http://localhost:4100`). `GET /hea
 }
 ```
 
-`source` is `openai` when the agent answered and `rules` for the fallback (which also returns `intent` and `data`). Rate limited to 20/minute.
+`source` is `gemini` when the agent answered and `rules` for the fallback (which also returns `intent` and `data`). Rate limited to 20/minute.
 
-**Voice:** `POST /voice/session` returns `{ clientSecret, expiresAt, model, voice, callsUrl }` for a browser WebRTC call to OpenAI Realtime (503 without `OPENAI_API_KEY`; 3/minute). `POST /tools/:name` with `{ args }` runs one registered tool and returns `{ result, proposesAction }`; unknown tools return 404 and invalid arguments 400. Results add a formatted INR string beside every amount (`totalPaise` → `totalRupees`). Action tools only create proposals.
+**Voice:** `POST /voice/session` returns `{ token, expiresAt, model, voice, liveUrl }` for a browser WebSocket session with the Gemini Live API (503 without `GEMINI_API_KEY`; 3/minute). `voice` in the body picks one of `Kore`, `Aoede`, `Leda`, `Zephyr`, `Puck`, `Charon`, `Orus`, `Fenrir`. `POST /tools/:name` with `{ args }` runs one registered tool and returns `{ result, proposesAction }`; unknown tools return 404 and invalid arguments 400. Results add a formatted INR string beside every amount (`totalPaise` → `totalRupees`). Action tools only create proposals.
 
 Tools: `get_spending_summary`, `get_category_breakdown`, `compare_monthly_spending`, `find_recurring_subscriptions`, `get_upcoming_bills`, `get_emi_schedule`, `get_unusual_spending`, `create_reminder`, `configure_spending_alert`, `prepare_subscription_action`.
 

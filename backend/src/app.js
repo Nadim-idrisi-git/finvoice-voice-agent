@@ -8,7 +8,7 @@ import { createLogger, requestLog } from "./middleware/requestLog.js";
 import { createMemoryStore } from "./store/memory.js";
 import { createProfileStore, loadProfile } from "./store/profile.js";
 import { createActionService } from "./services/actions.js";
-import { createOpenAIClient } from "./services/openai.js";
+import { createGeminiClient } from "./services/gemini.js";
 import { financeRoutes } from "./routes/finance.js";
 import { actionRoutes } from "./routes/actions.js";
 import { assistantRoutes } from "./routes/assistant.js";
@@ -31,7 +31,7 @@ export function createApp({
 }) {
   const app = express();
   const actions = createActionService(store);
-  const openai = createOpenAIClient({ apiKey: config.OPENAI_API_KEY, fetch, log });
+  const gemini = createGeminiClient({ apiKey: config.GEMINI_API_KEY, fetch, log });
   app.locals.databaseStatus = "synthetic-fixture";
 
   app.disable("x-powered-by");
@@ -63,7 +63,7 @@ export function createApp({
       status: "ok",
       database: app.locals.databaseStatus,
       store: store.kind,
-      aiConfigured: openai.configured,
+      aiConfigured: gemini.configured,
     }),
   );
 
@@ -81,7 +81,7 @@ export function createApp({
   app.use("/api/v1/assistant/message", rateLimit({ limit: config.ASSISTANT_RATE_LIMIT }));
   app.use("/api/v1", financeRoutes({ store }));
   app.use("/api/v1", actionRoutes({ actions }));
-  app.use("/api/v1", assistantRoutes({ store, actions, config, openai, log }));
+  app.use("/api/v1", assistantRoutes({ store, actions, config, gemini, log }));
 
   app.use((err, req, res, _next) => {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, requestId: req.id });

@@ -22,8 +22,8 @@ describe("config and validation", () => {
   it("applies defaults and rejects bad values", () => {
     const config = loadConfig({});
     assert.equal(config.PORT, 4100);
-    assert.equal(config.OPENAI_REALTIME_MODEL, "gpt-realtime-2.1");
-    assert.equal(config.OPENAI_API_KEY, undefined);
+    assert.equal(config.GEMINI_LIVE_MODEL, "gemini-3.8-live");
+    assert.equal(config.GEMINI_API_KEY, undefined);
     assert.throws(() => loadConfig({ PORT: "abc" }), /PORT/);
     assert.throws(() => loadConfig({ NODE_ENV: "staging" }), /NODE_ENV/);
   });

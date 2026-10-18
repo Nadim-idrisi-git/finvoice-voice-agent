@@ -8,11 +8,11 @@ import { executeTool } from "../services/tools.js";
 import { createVoiceSession } from "../services/voice.js";
 import { validateAnswer } from "../services/validator.js";
 
-/** Text chat (OpenAI agent with rule-based fallback), voice tool execution, and voice session minting. */
-export function assistantRoutes({ store, actions, config, openai, log }) {
+/** Text chat (Gemini agent with rule-based fallback), voice tool execution, and voice session minting. */
+export function assistantRoutes({ store, actions, config, gemini, log }) {
   const router = Router();
-  // Last OpenAI response per user, for short-term conversation memory in text chat.
-  const lastResponse = new Map();
+  // Recent Gemini conversation per user, for short-term conversation memory in text chat.
+  const lastHistory = new Map();
   // Tool results from the user's previous turn, so follow-up answers can cite them.
   const lastEvidence = new Map();
 
@@ -34,27 +34,27 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
     const user = res.locals.user;
     let reply;
     let source = "rules";
-    if (openai.configured) {
+    if (gemini.configured) {
       try {
         reply = await runAgent({
           message: value.message,
           ctx: { user, store, actions, userMessage: value.message },
-          openai,
-          model: config.OPENAI_MODEL,
-          reasoningEffort: config.OPENAI_REASONING_EFFORT,
-          previousResponseId: lastResponse.get(user.id),
+          gemini,
+          model: config.GEMINI_MODEL,
+          thinkingLevel: config.GEMINI_THINKING_LEVEL,
+          history: lastHistory.get(user.id),
           evidenceCarryover: lastEvidence.get(user.id) ?? [],
           log,
         });
-        lastResponse.set(user.id, reply.responseId);
+        lastHistory.set(user.id, reply.history);
         lastEvidence.set(user.id, reply.toolResults);
-        source = "openai";
+        source = "gemini";
       } catch (err) {
         log.warn({ requestId: req.id, error: err instanceof Error ? err.message : "unknown" }, "Agent failed; using rules");
       }
     }
     reply ??= await answerWithRules(value.message, user.id);
-    const { responseId: _id, toolResults: _evidence, ...publicReply } = reply;
+    const { history: _history, toolResults: _evidence, ...publicReply } = reply;
     res.json({
       ...publicReply,
       actionProposal: reply.actionProposals[0] ?? null,
@@ -64,7 +64,7 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
     });
   });
 
-  // Voice tool calls are idempotent per OpenAI call_id: a retried or duplicated call returns the
+  // Voice tool calls are idempotent per Gemini function call id: a retried or duplicated call returns the
   // first result instead of running the tool (and creating an action) twice.
   const toolCallResults = new Map();
   // Recent tool results per user (server-produced, never client-supplied) for post-hoc voice validation.
@@ -102,8 +102,8 @@ export function assistantRoutes({ store, actions, config, openai, log }) {
   });
 
   router.post("/voice/session", async (req, res) => {
-    const voice = typeof req.body?.voice === "string" ? req.body.voice.toLowerCase() : undefined;
-    res.json(await createVoiceSession({ config, user: res.locals.user, openai, voice }));
+    const voice = typeof req.body?.voice === "string" ? req.body.voice : undefined;
+    res.json(await createVoiceSession({ config, user: res.locals.user, gemini, voice }));
   });
 
   return router;

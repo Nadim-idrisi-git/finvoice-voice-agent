@@ -31,8 +31,8 @@ const policy = (user) => [
 export const textInstructions = (user) =>
   [...policy(user), "In text chat, answer in two or three short sentences, the essential fact first."].join(" ");
 
-// OpenAI Realtime voices by perceived gender, so Hindi first-person verbs match the voice.
-const FEMALE_VOICES = new Set(["marin", "coral", "sage", "shimmer", "alloy"]);
+// Gemini Live voices by perceived gender, so Hindi first-person verbs match the voice.
+const FEMALE_VOICES = new Set(["kore", "aoede", "leda", "zephyr"]);
 
 function persona(voice) {
   const female = FEMALE_VOICES.has(String(voice).toLowerCase());
@@ -41,7 +41,7 @@ function persona(voice) {
     : "You are a man. In Hindi and Hinglish always use masculine first-person forms: \"main batata hoon\", \"main check karta hoon\", \"main dekh raha hoon\", \"main bata sakta hoon\".";
 }
 
-export const voiceInstructions = (user, voice = "marin") =>
+export const voiceInstructions = (user, voice = "Kore") =>
   [
     // Language first: it is the most important behaviour on a voice call.
     "LANGUAGE (most important): speak natural Hinglish by default, the way people in Delhi or Mumbai talk on the phone: Hindi sentence structure with everyday English money words (charge, balance, autopay, account, refund, draft, confirm). Stay in Hinglish for the whole call, including confirmations. Switch to pure English only if he speaks only English, and to simple Hindi only if he speaks only Hindi. Never use formal or Sanskritised Hindi.",

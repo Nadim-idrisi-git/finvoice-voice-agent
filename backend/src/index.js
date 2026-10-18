@@ -37,5 +37,5 @@ app.listen(config.PORT, (error) => {
     log.error({ port: config.PORT, error: error.message }, "Could not start the API (is the port already in use?)");
     process.exit(1);
   }
-  log.info({ port: config.PORT, origins: config.WEB_ORIGINS, demoMode: config.DEMO_MODE, ai: Boolean(config.OPENAI_API_KEY) }, "API listening");
+  log.info({ port: config.PORT, origins: config.WEB_ORIGINS, demoMode: config.DEMO_MODE, ai: Boolean(config.GEMINI_API_KEY) }, "API listening");
 });

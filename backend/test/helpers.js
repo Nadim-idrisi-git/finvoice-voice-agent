@@ -2,7 +2,7 @@ import { once } from "node:events";
 import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 
-/** Starts an isolated app on a random port. `deps.fetch` replaces the OpenAI network calls. */
+/** Starts an isolated app on a random port. `deps.fetch` replaces the Gemini network calls. */
 export async function startApp(env = {}, deps = {}) {
   const app = createApp({ config: loadConfig({ NODE_ENV: "test", ...env }), ...deps });
   const server = app.listen(0);

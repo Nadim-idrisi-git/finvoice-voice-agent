@@ -2,13 +2,13 @@
 
 A voice-first personal finance assistant using synthetic INR records. Ask about spending, subscriptions, bills, and EMIs by text or live voice; propose reminders and alerts that you confirm before anything is recorded. No bank, payment, or subscription provider is connected.
 
-**Stack:** JavaScript (ES6+), React, Tailwind CSS, Node.js, Express, MongoDB, OpenAI API (Responses API agent with tool calling, Realtime API for live voice), deployed on Vercel (frontend) and Render (backend).
+**Stack:** JavaScript (ES6+), React, Tailwind CSS, Node.js, Express, MongoDB, Google Gemini API (`gemini-3.8-flash` agent with tool calling, `gemini-3.8-live` Live API for native-audio voice), deployed on Vercel (frontend) and Render (backend).
 
 ## Project structure
 
 ```text
 frontend/   React + Tailwind CSS app (Vite build), deployed to Vercel
-backend/    Node.js + Express REST API, OpenAI integration, MongoDB seed, deployed to Render
+backend/    Node.js + Express REST API, Gemini integration, MongoDB seed, deployed to Render
 docs/       Architecture, API, voice, security, testing, and deployment notes
 ```
 
@@ -18,10 +18,10 @@ Requirements: Node.js 20+ and npm. MongoDB is optional (only for `npm run seed`)
 
 1. `npm run setup` installs both apps.
 2. `cp backend/.env.example backend/.env` and, optionally, `cp frontend/.env.example frontend/.env`.
-3. Optional: set `OPENAI_API_KEY` in `backend/.env` to enable the AI agent and live voice.
+3. Optional: set `GEMINI_API_KEY` in `backend/.env` to enable the AI agent and live voice.
 4. `npm run dev` starts the backend on <http://localhost:4100> and the frontend on <http://localhost:5173>.
 
-Without an OpenAI key, text chat uses the built-in rule-based assistant and voice is disabled; everything else works. OpenAI usage is billed to your own account; this project provisions no paid resources.
+Without a Gemini key, text chat uses the built-in rule-based assistant and voice is disabled; everything else works. Gemini usage is billed to your own account; this project provisions no paid resources.
 
 | Command         | What it does                                            |
 | --------------- | ------------------------------------------------------- |
@@ -31,12 +31,12 @@ Without an OpenAI key, text chat uses the built-in rule-based assistant and voic
 | `npm run build` | Syntax-check the backend and build the frontend         |
 | `npm run seed`  | Write synthetic transactions to MongoDB                 |
 
-In `backend/`: `npm run ingest` parses the buildathon dataset into `data/profile.json`; `npm run eval` runs the evaluation suite against the real model (needs `OPENAI_API_KEY`).
+In `backend/`: `npm run ingest` parses the buildathon dataset into `data/profile.json`; `npm run eval` runs the evaluation suite against the real model (needs `GEMINI_API_KEY`); `npm run voice-smoke` plays a typed Hinglish call against the Live model.
 
 ## How it works
 
-- **Text chat:** the backend runs an OpenAI agent (Responses API) that calls server-side tools over your records, so every amount comes from deterministic calculations, not the model. If OpenAI is not configured or fails, a rule-based English/Hindi/Hinglish assistant answers.
-- **Live voice:** the backend mints a short-lived OpenAI Realtime key; the browser connects over WebRTC, streams microphone audio, and forwards the model's tool calls to the same backend tools. You can interrupt at any time.
+- **Text chat:** the backend runs a Gemini agent (`generateContent` with function calling) that calls server-side tools over your records, so every amount comes from deterministic calculations, not the model. If Gemini is not configured or fails, a rule-based English/Hindi/Hinglish assistant answers.
+- **Live voice:** the backend mints a single-use Gemini Live token with the model, voice, instructions, and tools locked in; the browser connects over a WebSocket, streams 16 kHz microphone audio, plays the 24 kHz reply, and forwards the model's tool calls to the same backend tools. You can interrupt at any time.
 - **Actions:** the assistant can only _propose_ reminders, alerts, or subscription workflows. Nothing is recorded until you confirm it under Actions.
 
 The demo identity and records are synthetic. All `/api/v1` routes return 503 in production because real authentication is not implemented yet. Accuracy controls and measured results: [docs/EVALUATION.md](docs/EVALUATION.md), [docs/SOURCES.md](docs/SOURCES.md), [docs/INTENTS.md](docs/INTENTS.md). Capacity assumptions (not load-tested): [docs/CAPACITY.md](docs/CAPACITY.md). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/API.md](docs/API.md), [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

@@ -1,6 +1,6 @@
 # ADR 0002: OpenAI for the text agent and live voice
 
-Status: accepted. Supersedes [ADR 0001](0001-voice-provider.md).
+Status: superseded by [ADR 0003](0003-gemini.md). Supersedes [ADR 0001](0001-voice-provider.md).
 
 The project standardises on the OpenAI API, using one provider key for both features:
 
